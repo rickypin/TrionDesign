@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+单个代码文件不超过500行
+前端设计开发，遵循 docs/design-token.md
