@@ -26,6 +26,7 @@ export interface TransTypeData {
   time: number;
   succ: number;
   impact: number;
+  outlierness: number;
 }
 
 export interface ClientData {
@@ -35,6 +36,7 @@ export interface ClientData {
   time: number;
   succ: number;
   impact: number;
+  outlierness: number;
 }
 
 export interface ChannelData {
@@ -53,6 +55,7 @@ export interface ServerData {
   time: number;
   succ: number;
   impact: number;
+  outlierness: number;
 }
 
 export interface ReturnCodeData {

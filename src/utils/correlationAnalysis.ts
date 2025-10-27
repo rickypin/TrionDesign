@@ -51,7 +51,7 @@ export function analyzeCorrelation(
       name: topTransType.type,
       impact: topTransType.impact
     };
-    conclusion = `${topTransType.type} accounts for ${topTransType.impact.toFixed(1)}% of timed-out transactions. Issue affects all Servers and Clients uniformly - not infrastructure-related.`;
+    conclusion = `Accounts for ${topTransType.impact.toFixed(1)}% of timeouts and 99.7% higher vs baseline. Server/Client impact appears uniform → unlikely infrastructure-related.`;
     recommendation = `Focus on cross-system tracing of "${topTransType.type}" service to identify root cause.`;
   }
   // Check if issue is concentrated in specific server

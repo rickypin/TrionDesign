@@ -31,6 +31,70 @@ const CHART_COLORS = {
   indigo: '#6366f1',    // 靛青 - 深邃、稳重
 } as const;
 
+// Custom label component for reference lines with icons
+const CustomReferenceLabel = ({
+  viewBox,
+  value,
+  icon,
+  fill,
+  isDark,
+  yAxisDomain = [50, 100]
+}: {
+  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  value: string;
+  icon: 'line' | 'triangle';
+  fill: string;
+  isDark: boolean;
+  yAxisDomain?: [number, number];
+}) => {
+  if (!viewBox || viewBox.x === undefined || viewBox.y === undefined || viewBox.height === undefined) return null;
+
+  const x = viewBox.x;
+
+  // In Recharts coordinate system:
+  // viewBox.y = top of the chart area
+  // The 100% gridline is at viewBox.y
+  // We need to place text and icon above this line
+  const chartTop = viewBox.y;
+
+  // Position elements above the 100% line
+  const iconSize = 8;
+  const iconCenterY = chartTop - 10; // Icon center 10px above the 100% line
+  const textY = iconCenterY - 10; // Text baseline 10px above icon center
+
+  return (
+    <g>
+      {icon === 'line' ? (
+        // Vertical line marker
+        <line
+          x1={x}
+          y1={iconCenterY - iconSize / 2}
+          x2={x}
+          y2={iconCenterY + iconSize / 2}
+          stroke={fill}
+          strokeWidth={2}
+        />
+      ) : (
+        // Downward triangle marker (pointing down)
+        <polygon
+          points={`${x},${iconCenterY + iconSize / 2} ${x - iconSize / 2},${iconCenterY - iconSize / 2} ${x + iconSize / 2},${iconCenterY - iconSize / 2}`}
+          fill={fill}
+        />
+      )}
+      <text
+        x={x}
+        y={textY}
+        textAnchor="middle"
+        fill={fill}
+        fontSize={11}
+        fontWeight={600}
+      >
+        {value}
+      </text>
+    </g>
+  );
+};
+
 export default function App(): React.ReactElement {
   const [activeChart, setActiveChart] = useState<'network' | 'tcp'>('network');
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -200,8 +264,12 @@ export default function App(): React.ReactElement {
             </div>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                  <CartesianGrid strokeDasharray="3 3" />
+                <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 32, bottom: 8 }} syncId="timeSeriesSync">
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
+                    strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
+                  />
                   <XAxis dataKey="t" />
                   <YAxis domain={[50, 100]} tickFormatter={(v) => `${formatNumber(v)}%`} />
                   <Tooltip formatter={(v) => (typeof v === "number" ? `${formatNumber(v)}%` : v)} />
@@ -213,28 +281,37 @@ export default function App(): React.ReactElement {
                     stroke={resolvedTheme === 'dark' ? '#f87171' : '#dc2626'}
                     strokeWidth={2}
                     strokeOpacity={0.7}
-                    label={{
-                      value: "Triggered",
-                      position: "insideTopLeft",
-                      fill: resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626',
-                      fontSize: 11,
-                      offset: 10,
-                      fontWeight: 600
-                    }}
+                    label={<CustomReferenceLabel
+                      value="Triggered"
+                      icon="line"
+                      fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
+                      isDark={resolvedTheme === 'dark'}
+                      yAxisDomain={[50, 100]}
+                    />}
+                  />
+                  <ReferenceLine
+                    x="21:30"
+                    stroke="transparent"
+                    label={<CustomReferenceLabel
+                      value="Lowest Point"
+                      icon="triangle"
+                      fill={resolvedTheme === 'dark' ? '#fb923c' : '#ea580c'}
+                      isDark={resolvedTheme === 'dark'}
+                      yAxisDomain={[50, 100]}
+                    />}
                   />
                   <ReferenceLine
                     x="21:32"
                     stroke={resolvedTheme === 'dark' ? '#f87171' : '#dc2626'}
                     strokeWidth={2}
                     strokeOpacity={0.7}
-                    label={{
-                      value: "Recovered",
-                      position: "insideTopRight",
-                      fill: resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626',
-                      fontSize: 11,
-                      offset: 10,
-                      fontWeight: 600
-                    }}
+                    label={<CustomReferenceLabel
+                      value="Recovered"
+                      icon="line"
+                      fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
+                      isDark={resolvedTheme === 'dark'}
+                      yAxisDomain={[50, 100]}
+                    />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -308,7 +385,11 @@ export default function App(): React.ReactElement {
                         <stop offset="100%" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
+                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
+                    />
                     <XAxis dataKey="t" />
                     <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
                     <Tooltip formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)} />
@@ -334,7 +415,11 @@ export default function App(): React.ReactElement {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={tcpHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
+                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
+                    />
                     <XAxis dataKey="t" />
                     <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
@@ -377,10 +462,10 @@ export default function App(): React.ReactElement {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
-                  Multi-Dimensional Breakdown
+                  Impact Attribution
                 </h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Snapshot at <span className="font-medium text-neutral-900 dark:text-neutral-100">21:30</span> when response rate dropped to <span className="font-medium text-neutral-900 dark:text-neutral-100">77.4%</span> · Shading indicates contribution level
+                  Business & Infrastructure contributors at <span className="font-medium text-neutral-900 dark:text-neutral-100">21:30</span> (response rate dropped to <span className="font-medium text-neutral-900 dark:text-neutral-100">77.4%</span>)
                 </p>
               </div>
             </div>
@@ -398,16 +483,17 @@ export default function App(): React.ReactElement {
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Service</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Business (Service)</h4>
                 </div>
                 <Table
                   keyField="type"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "type", title: "Service" },
-                    { key: "cnt", title: "Timed-Out Transactions" },
-                    { key: "impact", title: "Contribution (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                    { key: "type", title: "Service", tooltip: "Service Type" },
+                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={transType}
                 />
@@ -419,16 +505,17 @@ export default function App(): React.ReactElement {
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Infrastructure (Server IP)</h4>
                 </div>
                 <Table
                   keyField="ip"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "ip", title: "Server IP" },
-                    { key: "cnt", title: "Timed-Out Transactions" },
-                    { key: "impact", title: "Contribution (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                    { key: "ip", title: "Server", tooltip: "Server IP Address" },
+                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={servers}
                 />
@@ -440,16 +527,17 @@ export default function App(): React.ReactElement {
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Infrastructure (Client IP)</h4>
                 </div>
                 <Table
                   keyField="ip"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "ip", title: "Client IP" },
-                    { key: "cnt", title: "Timed-Out Transactions" },
-                    { key: "impact", title: "Contribution (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                    { key: "ip", title: "Client", tooltip: "Client IP Address" },
+                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={clients}
                 />

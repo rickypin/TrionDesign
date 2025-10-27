@@ -152,14 +152,18 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
 
   return (
     <div className="overflow-x-auto overflow-y-hidden">
-      <table className="min-w-full text-sm border-separate border-spacing-0">
+      <table className="min-w-full text-xs border-separate border-spacing-0">
         <thead className="text-neutral-500">
           <tr className="border-b-2 border-neutral-200 dark:border-neutral-600">
             {columns.map((c, index) => (
-              <th key={String(c.key)} className={`px-4 py-3 font-medium whitespace-nowrap bg-neutral-50/50 dark:bg-neutral-700/40 ${index === 0 ? 'text-left' : 'text-right'}`}>
-                <div className={`flex items-center gap-1 ${index === 0 ? '' : 'justify-end'}`}>
+              <th
+                key={String(c.key)}
+                className={`px-2 py-2 font-medium whitespace-nowrap bg-neutral-50/50 dark:bg-neutral-700/40 ${index === 0 ? 'text-left' : 'text-right'} cursor-help`}
+                title={c.tooltip}
+              >
+                <div className={`flex items-center gap-0.5 ${index === 0 ? '' : 'justify-end'}`}>
                   {c.title}
-                  {c.icon && <c.icon className="h-4 w-4" />}
+                  {c.icon && <c.icon className="h-3.5 w-3.5" />}
                 </div>
               </th>
             ))}
@@ -177,7 +181,7 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
                 } ${isBold ? 'font-semibold' : 'font-normal'}`}
               >
                 {columns.map((c, index) => (
-                  <td key={String(c.key)} className={`px-4 py-3 whitespace-nowrap ${index === 0 ? 'text-left' : 'text-right'}`}>{c.render ? c.render(row[c.key], row) : row[c.key]}</td>
+                  <td key={String(c.key)} className={`px-2 py-2 whitespace-nowrap ${index === 0 ? 'text-left' : 'text-right'}`}>{c.render ? c.render(row[c.key], row) : row[c.key]}</td>
                 ))}
               </tr>
             );
