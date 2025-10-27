@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -20,6 +21,64 @@ import { responseRate, networkHealth, tcpHealth, transType, clients, servers } f
 import { useTheme } from "@/hooks/useTheme";
 import { formatNumber } from "@/utils/format";
 import { analyzeCorrelation } from "@/utils/correlationAnalysis";
+
+// IP Tooltip Component
+const IPTooltip: React.FC<{ ip: string; children: React.ReactNode }> = ({ ip, children }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const hideTimer = useRef<number | null>(null);
+  const { resolvedTheme } = useTheme();
+  const spanRef = useRef<HTMLSpanElement>(null);
+
+  const openTooltip = () => {
+    if (spanRef.current) {
+      const rect = spanRef.current.getBoundingClientRect();
+      setPosition({ top: rect.bottom + 4, left: rect.left });
+    }
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    setShowTooltip(true);
+  };
+
+  const scheduleClose = () => {
+    if (hideTimer.current) window.clearTimeout(hideTimer.current);
+    hideTimer.current = window.setTimeout(() => setShowTooltip(false), 150);
+  };
+
+  return (
+    <>
+      <span
+        ref={spanRef}
+        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer underline underline-offset-2"
+        onMouseEnter={openTooltip}
+        onMouseLeave={scheduleClose}
+      >
+        {children}
+      </span>
+      {showTooltip && createPortal(
+        <div
+          className="fixed z-[9999] px-4 py-3 rounded-lg shadow-lg whitespace-nowrap bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-neutral-100"
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`
+          }}
+          onMouseEnter={openTooltip}
+          onMouseLeave={scheduleClose}
+        >
+          <div className="text-sm space-y-2">
+            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Dynatrace</div>
+            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Solarwinds</div>
+            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Netis NPM</div>
+            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Netis 42</div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
 
 // 明亮而优雅的配色池 - 避免告警色（红/绿）
 const CHART_COLORS = {
@@ -272,7 +331,18 @@ export default function App(): React.ReactElement {
                   />
                   <XAxis dataKey="t" />
                   <YAxis domain={[50, 100]} tickFormatter={(v) => `${formatNumber(v)}%`} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? `${formatNumber(v)}%` : v)} />
+                  <Tooltip
+                    formatter={(v) => (typeof v === "number" ? `${formatNumber(v)}%` : v)}
+                    contentStyle={{
+                      backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
+                      border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
+                      borderRadius: '8px',
+                      color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                    }}
+                    labelStyle={{
+                      color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                    }}
+                  />
                   <Legend />
                   <ReferenceArea x1="21:27" x2="21:32" fill="red" fillOpacity={0.1} />
                   <Line type="monotone" dataKey="rate" name="Transaction Response Rate" stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
@@ -392,7 +462,18 @@ export default function App(): React.ReactElement {
                     />
                     <XAxis dataKey="t" />
                     <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                    <Tooltip formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)} />
+                    <Tooltip
+                      formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)}
+                      contentStyle={{
+                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
+                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
+                        borderRadius: '8px',
+                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                      }}
+                      labelStyle={{
+                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                      }}
+                    />
                     <Legend />
                     <ReferenceArea x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
                     <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
@@ -423,12 +504,23 @@ export default function App(): React.ReactElement {
                     <XAxis dataKey="t" />
                     <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                    <Tooltip formatter={(v, name) => {
-                      if (typeof v === "number") {
-                        return formatNumber(v);
-                      }
-                      return v;
-                    }} />
+                    <Tooltip
+                      formatter={(v, name) => {
+                        if (typeof v === "number") {
+                          return formatNumber(v);
+                        }
+                        return v;
+                      }}
+                      contentStyle={{
+                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
+                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
+                        borderRadius: '8px',
+                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                      }}
+                      labelStyle={{
+                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                      }}
+                    />
                     <Legend />
                     <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
                     <ReferenceLine
@@ -477,20 +569,20 @@ export default function App(): React.ReactElement {
           {/* Analysis Tables - Horizontal Layout */}
           <div className="p-6">
             <div className="grid grid-cols-3 gap-6 items-start">
-              {/* Service Table */}
+              {/* Trans Type Table */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Business (Service)</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
                 </div>
                 <Table
                   keyField="type"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "type", title: "Service", tooltip: "Service Type" },
+                    { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
                     { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
                     { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
@@ -505,14 +597,19 @@ export default function App(): React.ReactElement {
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Infrastructure (Server IP)</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
                 </div>
                 <Table
                   keyField="ip"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "ip", title: "Server", tooltip: "Server IP Address" },
+                    {
+                      key: "ip",
+                      title: "Server",
+                      tooltip: "Server IP Address",
+                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                    },
                     { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
                     { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
@@ -527,14 +624,19 @@ export default function App(): React.ReactElement {
                   <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
                     <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Infrastructure (Client IP)</h4>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
                 </div>
                 <Table
                   keyField="ip"
                   colorColumn="impact"
                   highlightValue={correlationInsight.primaryFactor.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
-                    { key: "ip", title: "Client", tooltip: "Client IP Address" },
+                    {
+                      key: "ip",
+                      title: "Client",
+                      tooltip: "Client IP Address",
+                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                    },
                     { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
                     { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
