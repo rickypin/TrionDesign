@@ -56,7 +56,7 @@ export interface ServerData {
 }
 
 export interface ReturnCodeData {
-  code: number;
+  code: number | string;
   cnt: number;
   resp: number;
   time: number;
@@ -72,9 +72,10 @@ export interface CardProps {
 
 export interface SectionHeaderProps {
   icon: LucideIcon;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: string;
   right?: React.ReactNode;
+  iconColor?: 'red' | 'blue' | 'green' | 'neutral';
 }
 
 export interface KPIProps {
@@ -88,11 +89,13 @@ export interface TableColumn<T> {
   key: keyof T;
   title: string;
   render?: (value: any, row: T) => React.ReactNode;
+  icon?: LucideIcon;
 }
 
 export interface TableProps<T> {
   columns: TableColumn<T>[];
   data: T[];
   keyField: keyof T;
+  colorColumn?: keyof T;
 }
 

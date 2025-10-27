@@ -31,21 +31,45 @@ export const responseRate: ResponseRateData[] = [
 ];
 
 export const networkHealth: NetworkHealthData[] = [
+  { t: "21:21", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:22", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:23", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:24", loss: 5, retrans: 7, dupAck: 9 },
   { t: "21:25", loss: 5, retrans: 7, dupAck: 9 },
-  { t: "21:27", loss: 5.2, retrans: 7.3, dupAck: 9.8 },
-  { t: "21:29", loss: 4.6, retrans: 6.8, dupAck: 9.1 },
-  { t: "21:31", loss: 5.0, retrans: 7.1, dupAck: 9.5 },
-  { t: "21:33", loss: 4.7, retrans: 6.9, dupAck: 9.2 },
-  { t: "21:35", loss: 5.1, retrans: 7.4, dupAck: 9.9 },
+  { t: "21:26", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:27", loss: 5, retrans: 7, dupAck: 10 },
+  { t: "21:28", loss: 5, retrans: 7, dupAck: 10 },
+  { t: "21:29", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:30", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:31", loss: 5, retrans: 7, dupAck: 10 },
+  { t: "21:32", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:33", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:34", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:35", loss: 5, retrans: 7, dupAck: 10 },
+  { t: "21:36", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:37", loss: 5, retrans: 7, dupAck: 9 },
+  { t: "21:38", loss: 5, retrans: 7, dupAck: 9 },
 ];
 
 export const tcpHealth: TcpHealthData[] = [
-  { t: "21:25", setup: 99.8, rst: 2.0 },
-  { t: "21:27", setup: 99.9, rst: 2.1 },
-  { t: "21:29", setup: 99.8, rst: 1.9 },
-  { t: "21:31", setup: 99.9, rst: 2.0 },
-  { t: "21:33", setup: 99.8, rst: 1.8 },
-  { t: "21:35", setup: 99.9, rst: 2.2 },
+  { t: "21:21", setup: 99.9, rst: 2 },
+  { t: "21:22", setup: 99.8, rst: 2 },
+  { t: "21:23", setup: 99.9, rst: 2 },
+  { t: "21:24", setup: 99.8, rst: 2 },
+  { t: "21:25", setup: 99.8, rst: 2 },
+  { t: "21:26", setup: 99.9, rst: 2 },
+  { t: "21:27", setup: 99.9, rst: 2 },
+  { t: "21:28", setup: 99.8, rst: 2 },
+  { t: "21:29", setup: 99.8, rst: 2 },
+  { t: "21:30", setup: 99.9, rst: 2 },
+  { t: "21:31", setup: 99.9, rst: 2 },
+  { t: "21:32", setup: 99.8, rst: 2 },
+  { t: "21:33", setup: 99.8, rst: 2 },
+  { t: "21:34", setup: 99.9, rst: 2 },
+  { t: "21:35", setup: 99.9, rst: 2 },
+  { t: "21:36", setup: 99.8, rst: 2 },
+  { t: "21:37", setup: 99.9, rst: 2 },
+  { t: "21:38", setup: 99.8, rst: 2 },
 ];
 
 export const transType: TransTypeData[] = [
@@ -57,8 +81,8 @@ export const transType: TransTypeData[] = [
 ];
 
 export const clients: ClientData[] = [
-  { ip: "10.10.24.204", cnt: 404, resp: 4.7, time: 43102, succ: 100, impact: 61.33 },
-  { ip: "10.10.24.206", cnt: 373, resp: 2.14, time: 68186, succ: 100, impact: 48.67 },
+  { ip: "10.10.24.204", cnt: 2536, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
+  { ip: "10.10.24.206", cnt: 2508, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
 ];
 
 export const channels: ChannelData[] = [
@@ -66,11 +90,15 @@ export const channels: ChannelData[] = [
 ];
 
 export const servers: ServerData[] = [
-  { ip: "10.10.10.30", cnt: 404, resp: 4.7, time: 43102, succ: 100, impact: 100 },
+  { ip: "10.10.16.30", cnt: 2536, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
+  { ip: "10.10.16.31", cnt: 2508, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
 ];
 
 export const returnCodes: ReturnCodeData[] = [
-  { code: 325, cnt: 325, resp: 0.0, time: 0, succ: 100, impact: 0.02 },
-  { code: 79, cnt: 79, resp: 100.0, time: 43102, succ: 100, impact: 0.01 },
+  { code: "null (No Resp)", cnt: 800, resp: 0.0, time: 0.0, succ: 0.00, impact: 100 },
+  { code: "00", cnt: 4200, resp: 100.0, time: 43102, succ: 100, impact: 0 },
+  { code: "51", cnt: 30, resp: 100.0, time: 141.559, succ: 100.00, impact: 0 },
+  { code: "62", cnt: 10, resp: 100.0, time: 117.304, succ: 100.00, impact: 0 },
+  { code: "61", cnt: 4, resp: 100.0, time: 66.124, succ: 100.00, impact: 0 },
 ];
 
