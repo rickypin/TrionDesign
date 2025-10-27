@@ -71,7 +71,7 @@ export interface CardProps {
 }
 
 export interface SectionHeaderProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string | React.ReactNode;
   subtitle?: string;
   right?: React.ReactNode;

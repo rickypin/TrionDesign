@@ -81,24 +81,20 @@ export const transType: TransTypeData[] = [
 ];
 
 export const clients: ClientData[] = [
-  { ip: "10.10.24.204", cnt: 2536, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
-  { ip: "10.10.24.206", cnt: 2508, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
+  { ip: "10.10.24.204", cnt: 434, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
+  { ip: "10.10.24.206", cnt: 412, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
 ];
 
 export const channels: ChannelData[] = [
-  { channel: "null", cnt: 404, resp: 4.7, time: 43102, succ: 100, impact: 100 },
+  { channel: "null", cnt: 846, resp: 4.7, time: 43102, succ: 100, impact: 100 },
 ];
 
 export const servers: ServerData[] = [
-  { ip: "10.10.16.30", cnt: 2536, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
-  { ip: "10.10.16.31", cnt: 2508, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
+  { ip: "10.10.16.30", cnt: 434, resp: 83.83, time: 61.805, succ: 29.07, impact: 51.33 },
+  { ip: "10.10.16.31", cnt: 412, resp: 84.45, time: 67.872, succ: 28.66, impact: 48.67 },
 ];
 
 export const returnCodes: ReturnCodeData[] = [
-  { code: "null (No Resp)", cnt: 800, resp: 0.0, time: 0.0, succ: 0.00, impact: 100 },
-  { code: "00", cnt: 4200, resp: 100.0, time: 43102, succ: 100, impact: 0 },
-  { code: "51", cnt: 30, resp: 100.0, time: 141.559, succ: 100.00, impact: 0 },
-  { code: "62", cnt: 10, resp: 100.0, time: 117.304, succ: 100.00, impact: 0 },
-  { code: "61", cnt: 4, resp: 100.0, time: 66.124, succ: 100.00, impact: 0 },
+  { code: "null (No Resp)", cnt: 846, resp: 0.0, time: 0.0, succ: 0.00, impact: 100 },
 ];
 

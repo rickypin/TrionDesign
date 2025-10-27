@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle } from "lucide-react";
+import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -116,8 +116,8 @@ export default function App(): React.ReactElement {
         </div>
       </header>
 
-      <main className="w-full p-4 space-y-6">
-        {/* Alert Summary */}
+      <main className="w-full p-4 space-y-4">
+        {/* Alert Summary with Metric Progression */}
         <Card>
           {/* Alert Header */}
           <div className="flex items-center gap-3 p-4 border-b border-neutral-200/70 dark:border-neutral-800/70">
@@ -135,55 +135,62 @@ export default function App(): React.ReactElement {
           </div>
 
           {/* Alert Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pt-3 pb-3 border-b border-neutral-200/70 dark:border-neutral-800/70">
             {/* Alert Condition */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/50 dark:border-neutral-700/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Alert Condition</p>
-                <AlertTriangle className="h-4 w-4 text-neutral-400" />
+                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-700/50">
+                  <Gauge className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                </div>
               </div>
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Response Rate &lt; 85%</div>
               <div className="text-xs text-neutral-500">Threshold breached</div>
             </div>
 
             {/* Duration */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/50 dark:border-neutral-700/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Duration</p>
-                <Clock className="h-4 w-4 text-neutral-400" />
+                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-700/50">
+                  <Clock className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                </div>
               </div>
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">6 minutes</div>
               <div className="text-xs text-neutral-500">21:27 – 21:32</div>
             </div>
 
             {/* Lowest Point */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/50 dark:border-neutral-700/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Lowest Point</p>
-                <TrendingDown className="h-4 w-4 text-neutral-400" />
+                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-700/50">
+                  <Target className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                </div>
               </div>
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">77.4%</div>
               <div className="text-xs text-neutral-500">at 21:30</div>
             </div>
 
             {/* Status */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200/50 dark:border-neutral-700/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Status</p>
-                <CheckCircle className="h-4 w-4 text-neutral-400" />
+                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-700/50">
+                  <Info className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                </div>
               </div>
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Recovered</div>
               <div className="text-xs text-neutral-500">Back to 100% at 21:33</div>
             </div>
           </div>
-        </Card>
 
-        {/* Transaction Response Rate & Network Layer Health */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
-          {/* Metric Progression */}
-          <Card className="lg:h-[320px] flex flex-col">
-            <SectionHeader title="Metric Progression" subtitle="Tracking alert metric progression over time" />
-            <div className="flex-1 p-4">
+          {/* Metric Progression Chart */}
+          <div className="px-4 pb-3 pt-3">
+            <div className="mb-2">
+              <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Metric Progression</h4>
+            </div>
+            <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
                   <CartesianGrid strokeDasharray="3 3" />
@@ -198,99 +205,99 @@ export default function App(): React.ReactElement {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          {/* Network Layer Impact Assessment */}
-          <Card className="lg:h-[320px] flex flex-col">
-            <SectionHeader
-              title="Network Layer Impact Assessment"
-              subtitle="Determining if network layer contributed to the alert · Green: No impact · Red: Has impact"
-              right={
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setActiveChart('tcp')}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      activeChart === 'tcp'
-                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                        : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      healthStatus.tcp === 'error'
-                        ? 'bg-red-500'
-                        : 'bg-green-500'
-                    }`} />
-                    Availability
-                  </button>
-                  <button
-                    onClick={() => setActiveChart('network')}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      activeChart === 'network'
-                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                        : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      healthStatus.network === 'error'
-                        ? 'bg-red-500'
-                        : 'bg-green-500'
-                    }`} />
-                    Performance
-                  </button>
-                </div>
-              }
-            />
-            <div className="flex-1 p-4">
-              {/* Charts */}
-              <div className="h-full">
-                {activeChart === 'network' ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={networkHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                      <defs>
-                        <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopOpacity={0.35} />
-                          <stop offset="100%" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="t" />
-                      <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                      <Tooltip formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)} />
-                      <Legend />
-                      <ReferenceArea x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
-                      <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
-                      <Area type="monotone" dataKey="retrans" name="Retransmission" stroke={CHART_COLORS.cyan} fillOpacity={0.2} strokeWidth={2} />
-                      <Area type="monotone" dataKey="dupAck" name="Duplicate ACK" stroke={CHART_COLORS.amber} fillOpacity={0.2} strokeWidth={2} />
-                      <ReferenceLine x="21:27" stroke="green" strokeDasharray="5 5" />
-                      <ReferenceLine x="21:32" stroke="green" strokeDasharray="5 5" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={tcpHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="t" />
-                      <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} />
-                      <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                      <Tooltip formatter={(v, name) => {
-                        if (typeof v === "number") {
-                          return formatNumber(v);
-                        }
-                        return v;
-                      }} />
-                      <Legend />
-                      <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
-                      <ReferenceLine yAxisId="left" x="21:27" stroke="green" strokeDasharray="5 5" />
-                      <ReferenceLine yAxisId="left" x="21:32" stroke="green" strokeDasharray="5 5" />
-                      <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success %" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
-                      <Line yAxisId="right" type="monotone" dataKey="rst" name="TCP RST" stroke={CHART_COLORS.pink} dot={false} strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
+        {/* Second Row: Network Layer Impact Assessment - Full Width */}
+        <Card className="flex flex-col">
+          <SectionHeader
+            title="Network Layer Impact Assessment"
+            subtitle="Determining if network layer contributed to the alert · Green: No impact · Red: Has impact"
+            right={
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActiveChart('tcp')}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    activeChart === 'tcp'
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                      : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    healthStatus.tcp === 'error'
+                      ? 'bg-red-500'
+                      : 'bg-green-500'
+                  }`} />
+                  Availability
+                </button>
+                <button
+                  onClick={() => setActiveChart('network')}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    activeChart === 'network'
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                      : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    healthStatus.network === 'error'
+                      ? 'bg-red-500'
+                      : 'bg-green-500'
+                  }`} />
+                  Performance
+                </button>
               </div>
+            }
+          />
+          <div className="p-4">
+            {/* Charts */}
+            <div className="h-[240px]">
+              {activeChart === 'network' ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={networkHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
+                    <defs>
+                      <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopOpacity={0.35} />
+                        <stop offset="100%" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="t" />
+                    <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
+                    <Tooltip formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)} />
+                    <Legend />
+                    <ReferenceArea x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
+                    <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="retrans" name="Retransmission" stroke={CHART_COLORS.cyan} fillOpacity={0.2} strokeWidth={2} />
+                    <Area type="monotone" dataKey="dupAck" name="Duplicate ACK" stroke={CHART_COLORS.amber} fillOpacity={0.2} strokeWidth={2} />
+                    <ReferenceLine x="21:27" stroke="green" strokeDasharray="5 5" />
+                    <ReferenceLine x="21:32" stroke="green" strokeDasharray="5 5" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={tcpHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="t" />
+                    <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
+                    <Tooltip formatter={(v, name) => {
+                      if (typeof v === "number") {
+                        return formatNumber(v);
+                      }
+                      return v;
+                    }} />
+                    <Legend />
+                    <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
+                    <ReferenceLine yAxisId="left" x="21:27" stroke="green" strokeDasharray="5 5" />
+                    <ReferenceLine yAxisId="left" x="21:32" stroke="green" strokeDasharray="5 5" />
+                    <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success %" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
+                    <Line yAxisId="right" type="monotone" dataKey="rst" name="TCP RST" stroke={CHART_COLORS.pink} dot={false} strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
 
 
         {/* Multi-Dimensional Correlation Analysis */}
