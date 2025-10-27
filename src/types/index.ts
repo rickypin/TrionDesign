@@ -97,5 +97,6 @@ export interface TableProps<T> {
   data: T[];
   keyField: keyof T;
   colorColumn?: keyof T;
+  highlightValue?: string; // Value to highlight as primary factor
 }
 

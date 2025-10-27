@@ -65,15 +65,25 @@
 ### 主题系统
 项目支持**浅色模式**和**深色模式**切换，通过 Tailwind 的 `dark:` 变体实现。
 
+#### Dark 模式设计原则
+为了确保 dark 模式下的视觉协调性和可读性，我们遵循以下原则：
+
+1. **提高对比度** - 使用更浅的深色背景（neutral-900 而非 neutral-950），增强与卡片的对比
+2. **增强层次感** - 卡片背景使用 neutral-800/90，比页面背景更亮，形成清晰的层次
+3. **优化强调色** - 琥珀色、红色、绿色使用更高的透明度和更浅的色调，避免过暗
+4. **改进边框可见性** - 使用 neutral-600/700 而非 neutral-800，确保边框清晰可见
+5. **统一色彩饱和度** - 所有强调色在 dark 模式下使用相似的饱和度，保持视觉和谐
+
 ### 配色方案
 
 #### 1. 背景色（Background）
 | 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
 |------|---------|---------|------------|
-| 页面背景 | `#FAFAFA` | `#0A0A0A` | `bg-neutral-50 dark:bg-neutral-950` |
-| 卡片背景 | `rgba(255,255,255,0.7)` | `rgba(23,23,23,0.7)` | `bg-white/70 dark:bg-neutral-900/70` |
-| 头部背景 | `rgba(255,255,255,0.7)` | `rgba(23,23,23,0.6)` | `bg-white/70 dark:bg-neutral-900/60` |
-| 次级背景 | `#F5F5F5` | `#262626` | `bg-neutral-100 dark:bg-neutral-800` |
+| 页面背景 | `#FAFAFA` | `#171717` | `bg-neutral-50 dark:bg-neutral-900` |
+| 卡片背景 | `rgba(255,255,255,0.7)` | `rgba(38,38,38,0.9)` | `bg-white/70 dark:bg-neutral-800/90` |
+| 头部背景 | `rgba(255,255,255,0.7)` | `rgba(38,38,38,0.8)` | `bg-white/70 dark:bg-neutral-800/80` |
+| 次级背景 | `#F5F5F5` | `#404040` | `bg-neutral-100 dark:bg-neutral-700` |
+| 三级背景 | `#F5F5F5` | `#525252` | `bg-neutral-100 dark:bg-neutral-600` |
 
 #### 2. 文字色（Text）
 | 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
@@ -85,15 +95,18 @@
 #### 3. 强调色（Accent）
 | 颜色 | 用途 | 示例类 |
 |------|------|-------|
-| **Amber（琥珀色）** | 警告、告警状态 | `bg-amber-100 dark:bg-amber-900/40`<br>`text-amber-600` |
-| **Red（红色）** | 错误、严重告警 | 用于图表标记区域 |
+| **Amber（琥珀色）** | 警告、告警状态、数据高亮 | `bg-amber-100 dark:bg-amber-800/35`<br>`text-amber-600 dark:text-amber-300` |
+| **Red（红色）** | 错误、严重告警 | `bg-red-100 dark:bg-red-900/50`<br>`text-red-600 dark:text-red-300` |
+| **Green（绿色）** | 成功、正常状态 | `bg-green-100 dark:bg-green-900/50`<br>`text-green-600 dark:text-green-300` |
+| **Blue（蓝色）** | 信息提示 | `bg-blue-100 dark:bg-blue-900/50`<br>`text-blue-600 dark:text-blue-300` |
 | **Neutral Dark** | 主按钮 | `bg-neutral-900 dark:bg-white` |
 
 #### 4. 边框色（Border）
 | 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
 |------|---------|---------|------------|
-| 主边框 | `rgba(229,229,229,0.7)` | `rgba(38,38,38,0.7)` | `border-neutral-200/70 dark:border-neutral-800/70` |
-| 表格边框 | `#F5F5F5` | `#262626` | `border-neutral-100 dark:border-neutral-800` |
+| 主边框 | `rgba(229,229,229,0.7)` | `rgba(82,82,82,0.5)` | `border-neutral-200/70 dark:border-neutral-600/50` |
+| 次级边框 | `rgba(229,229,229,0.7)` | `rgba(64,64,64,1)` | `border-neutral-200/70 dark:border-neutral-700` |
+| 表格边框 | `#F5F5F5` | `#525252` | `border-neutral-100 dark:border-neutral-600` |
 | 聚焦边框 | `rgba(0,0,0,0.05)` | - | `ring-1 ring-black/5` |
 
 ---
