@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown } from "lucide-react";
+import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -16,7 +16,7 @@ import {
   ReferenceArea,
 } from "recharts";
 import { Card, SectionHeader, KPI, Table } from "@/components";
-import { responseRate, networkHealth, tcpHealth, transType, clients, channels, servers, returnCodes } from "@/data";
+import { responseRate, networkHealth, tcpHealth, transType, clients, servers } from "@/data";
 import { useTheme } from "@/hooks/useTheme";
 import { formatNumber } from "@/utils/format";
 
@@ -118,31 +118,71 @@ export default function App(): React.ReactElement {
 
       <main className="w-full p-4 space-y-6">
         {/* Alert Summary */}
-          <Card>
-            <SectionHeader
-              icon={AlertTriangle}
-              title={
-                <span>
-                  New Credit Card System · OpenShift, Transaction Response Rate dropped to 77.43%
-                  <span className="ml-2 text-xs font-normal text-neutral-500">21:27 – 21:32</span>
-                </span>
-              }
-              subtitle="Trigger Condition: Response Rate < 85% for 1 minute"
-              iconColor="red"
-            />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4">
-            <KPI label="Peak Impact" value="> 94% on Normal Purchase" trend="Primary driver" icon={Zap} />
-            <KPI label="Affected Server" value="10.10.16.30/10.10.16.31" trend="Single node concentration" icon={Server} />
-            <KPI label="Primary Client IPs" value="10.10.24.204 / .206" trend="High volume" icon={Globe} />
-            <KPI label="Current Response Rate" value="77.4%" trend="Recovered to 100% post-21:35" icon={Activity} />
+        <Card>
+          {/* Alert Header */}
+          <div className="flex items-center gap-3 p-4 border-b border-neutral-200/70 dark:border-neutral-800/70">
+            <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/40">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1 flex items-center gap-2.5">
+              <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                New Credit Card System · OpenShift
+              </span>
+              <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                Response rate dropped
+              </span>
+            </div>
+          </div>
+
+          {/* Alert Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+            {/* Alert Condition */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Alert Condition</p>
+                <AlertTriangle className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Response Rate &lt; 85%</div>
+              <div className="text-xs text-neutral-500">Threshold breached</div>
+            </div>
+
+            {/* Duration */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Duration</p>
+                <Clock className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">6 minutes</div>
+              <div className="text-xs text-neutral-500">21:27 – 21:32</div>
+            </div>
+
+            {/* Lowest Point */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Lowest Point</p>
+                <TrendingDown className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">77.4%</div>
+              <div className="text-xs text-neutral-500">at 21:30</div>
+            </div>
+
+            {/* Status */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Status</p>
+                <CheckCircle className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Recovered</div>
+              <div className="text-xs text-neutral-500">Back to 100% at 21:33</div>
+            </div>
           </div>
         </Card>
 
         {/* Transaction Response Rate & Network Layer Health */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
-          {/* Transaction Response Rate */}
+          {/* Metric Progression */}
           <Card className="lg:h-[320px] flex flex-col">
-            <SectionHeader icon={Activity} title="Transaction Response Rate" subtitle="Higher is better" />
+            <SectionHeader title="Metric Progression" subtitle="Tracking alert metric progression over time" />
             <div className="flex-1 p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
@@ -152,7 +192,7 @@ export default function App(): React.ReactElement {
                   <Tooltip formatter={(v) => (typeof v === "number" ? `${formatNumber(v)}%` : v)} />
                   <Legend />
                   <ReferenceArea x1="21:27" x2="21:32" fill="red" fillOpacity={0.1} />
-                  <Line type="monotone" dataKey="rate" name="Response Rate" stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
+                  <Line type="monotone" dataKey="rate" name="Transaction Response Rate" stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
                   <ReferenceLine x="21:27" stroke="red" strokeDasharray="5 5" />
                   <ReferenceLine x="21:32" stroke="red" strokeDasharray="5 5" />
                 </LineChart>
@@ -160,12 +200,11 @@ export default function App(): React.ReactElement {
             </div>
           </Card>
 
-          {/* Network Layer Health */}
+          {/* Network Layer Impact Assessment */}
           <Card className="lg:h-[320px] flex flex-col">
             <SectionHeader
-              icon={Layers}
-              title="Network Layer Health"
-              subtitle="Green: Healthy · Red: Issue"
+              title="Network Layer Impact Assessment"
+              subtitle="Determining if network layer contributed to the alert · Green: No impact · Red: Has impact"
               right={
                 <div className="flex gap-1">
                   <button
@@ -254,103 +293,87 @@ export default function App(): React.ReactElement {
         </div>
 
 
-        {/* Analysis Tables - Full Width Dimensions */}
-        <div className="space-y-6">
-          <Card>
-            <SectionHeader icon={BarChart3} title="Dimension · Trans Type" subtitle="2025-10-23 21:27 – 21:32 incident window" />
-            <div className="p-4">
-              <Table
-                keyField="type"
-                colorColumn="impact"
-                columns={[
-                  { key: "type", title: "Trans Type" },
-                  { key: "cnt", title: "Trans CNT" },
-                  { key: "resp", title: "Resp Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "time", title: "Resp Time (ms)", render: (v) => formatNumber(v) },
-                  { key: "succ", title: "Succ Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
-                ]}
-                data={transType}
-              />
+        {/* Multi-Dimensional Correlation Analysis */}
+        <Card>
+          {/* Section Header */}
+          <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
+                  Business Layer Correlation Analysis
+                </h3>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  Data from lowest response rate snapshot at <span className="font-medium text-neutral-900 dark:text-neutral-100">21:30</span> on <span className="font-medium">2025-10-23</span> (dropped to <span className="font-semibold text-red-600 dark:text-red-400">77.4%</span>) · Amber shading indicates impact level
+                </p>
+              </div>
             </div>
-          </Card>
+          </div>
 
-          <Card>
-            <SectionHeader icon={Globe} title="Dimension · Client IP" subtitle="2025-10-23 21:27 – 21:32 incident window" />
-            <div className="p-4">
-              <Table
-                keyField="ip"
-                colorColumn="impact"
-                columns={[
-                  { key: "ip", title: "Client IP" },
-                  { key: "cnt", title: "Trans CNT" },
-                  { key: "resp", title: "Resp Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "time", title: "Resp Time (ms)", render: (v) => formatNumber(v) },
-                  { key: "succ", title: "Succ Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
-                ]}
-                data={clients}
-              />
-            </div>
-          </Card>
+          {/* Analysis Tables - Horizontal Layout */}
+          <div className="p-6">
+            <div className="grid grid-cols-3 gap-6 items-start">
+              {/* Trans Type Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                    <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
+                </div>
+                <Table
+                  keyField="type"
+                  colorColumn="impact"
+                  columns={[
+                    { key: "type", title: "Trans Type" },
+                    { key: "cnt", title: "Timed-Out Transactions" },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                  ]}
+                  data={transType}
+                />
+              </div>
 
-          <Card>
-            <SectionHeader icon={Server} title="Dimension · Server IP" subtitle="2025-10-23 21:27 – 21:32 incident window" />
-            <div className="p-4">
-              <Table
-                keyField="ip"
-                colorColumn="impact"
-                columns={[
-                  { key: "ip", title: "Server IP" },
-                  { key: "cnt", title: "Trans CNT" },
-                  { key: "resp", title: "Resp Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "time", title: "Resp Time (ms)", render: (v) => formatNumber(v) },
-                  { key: "succ", title: "Succ Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
-                ]}
-                data={servers}
-              />
-            </div>
-          </Card>
+              {/* Server IP Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                    <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
+                </div>
+                <Table
+                  keyField="ip"
+                  colorColumn="impact"
+                  columns={[
+                    { key: "ip", title: "Server IP" },
+                    { key: "cnt", title: "Timed-Out Transactions" },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                  ]}
+                  data={servers}
+                />
+              </div>
 
-          <Card>
-            <SectionHeader icon={Activity} title="Dimension · Channel" subtitle="2025-10-23 21:27 – 21:32 incident window" />
-            <div className="p-4">
-              <Table
-                keyField="channel"
-                colorColumn="impact"
-                columns={[
-                  { key: "channel", title: "Channel" },
-                  { key: "cnt", title: "Trans CNT" },
-                  { key: "resp", title: "Resp Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "time", title: "Resp Time (ms)", render: (v) => formatNumber(v) },
-                  { key: "succ", title: "Succ Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
-                ]}
-                data={channels}
-              />
+              {/* Client IP Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                    <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
+                </div>
+                <Table
+                  keyField="ip"
+                  colorColumn="impact"
+                  columns={[
+                    { key: "ip", title: "Client IP" },
+                    { key: "cnt", title: "Timed-Out Transactions" },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
+                  ]}
+                  data={clients}
+                />
+              </div>
             </div>
-          </Card>
-
-          <Card>
-            <SectionHeader icon={BarChart3} title="Dimension · Return Code" subtitle="2025-10-23 21:27 – 21:32 incident window" />
-            <div className="p-4">
-              <Table
-                keyField="code"
-                colorColumn="impact"
-                columns={[
-                  { key: "code", title: "Return Code" },
-                  { key: "cnt", title: "Trans CNT" },
-                  { key: "resp", title: "Resp Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "time", title: "Resp Time (ms)", render: (v) => formatNumber(v) },
-                  { key: "succ", title: "Succ Rate (%)", render: (v) => `${formatNumber(v)}%` },
-                  { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown },
-                ]}
-                data={returnCodes}
-              />
-            </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
 
         {/* Footer Note */}
         <div className="text-xs text-neutral-500 text-center py-6">Demo view · Modern, minimal & clear · Built with React + Tailwind + Recharts</div>
