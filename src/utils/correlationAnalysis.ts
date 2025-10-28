@@ -2,7 +2,7 @@ import type { TransTypeData, ServerData, ClientData } from "@/types";
 
 export interface CorrelationInsight {
   conclusion: string;
-  primaryFactor: {
+  primaryFactor?: {
     type: 'transType' | 'server' | 'client' | 'distributed';
     name: string;
     impact: number;
@@ -40,8 +40,18 @@ export function analyzeCorrelation(
   let conclusion: string;
   let recommendation: string;
 
-  // Check if issue is distributed across servers and clients but concentrated in trans type
+  // Check if ALL dimensions are uniformly distributed (no primary factor)
   if (
+    transTypeDistribution === 'distributed' &&
+    serverDistribution === 'distributed' &&
+    clientDistribution === 'distributed'
+  ) {
+    primaryFactor = undefined;
+    conclusion = `Transaction count drop distributed evenly across all Servers, Clients, and Services. No single dominant factor - indicates infrastructure or network issue affecting all dimensions uniformly.`;
+    recommendation = `Investigate network infrastructure, shared dependencies, or configuration changes affecting the entire system.`;
+  }
+  // Check if issue is distributed across servers and clients but concentrated in trans type
+  else if (
     transTypeDistribution === 'concentrated' &&
     serverDistribution === 'distributed' &&
     clientDistribution === 'distributed'
@@ -64,6 +74,22 @@ export function analyzeCorrelation(
     conclusion = `Server ${topServer.ip} accounts for ${topServer.impact.toFixed(1)}% of timed-out transactions. Other servers show normal behavior - indicates server-specific issue.`;
     recommendation = `Investigate Server ${topServer.ip} for resource constraints, configuration issues, or service degradation.`;
   }
+  // Check if servers are evenly distributed but both have high impact (multiple servers affected)
+  else if (
+    serverDistribution === 'distributed' &&
+    servers.length === 2 &&
+    servers.every(s => s.impact > 40)
+  ) {
+    const serverIps = servers.map(s => s.ip).join(', ');
+    const totalServerImpact = servers.reduce((sum, s) => sum + s.impact, 0);
+    primaryFactor = {
+      type: 'server',
+      name: serverIps,
+      impact: totalServerImpact
+    };
+    conclusion = `Servers ${serverIps} collectively account for ${totalServerImpact.toFixed(1)}% of transaction count drop. Both servers show similar degradation - indicates infrastructure or network issue affecting multiple servers.`;
+    recommendation = `Investigate network infrastructure, shared dependencies, or configuration changes affecting both servers ${serverIps}.`;
+  }
   // Check if issue is concentrated in specific client
   else if (clientDistribution === 'concentrated') {
     primaryFactor = {
@@ -74,7 +100,7 @@ export function analyzeCorrelation(
     conclusion = `Client ${topClient.ip} accounts for ${topClient.impact.toFixed(1)}% of timed-out transactions. Other clients show normal behavior - indicates client-specific issue.`;
     recommendation = `Investigate Client ${topClient.ip} for network issues, configuration problems, or client-side bottlenecks.`;
   }
-  // Issue is distributed across all dimensions
+  // Issue is distributed across all dimensions (fallback case)
   else {
     primaryFactor = {
       type: 'distributed',

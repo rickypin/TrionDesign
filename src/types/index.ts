@@ -22,6 +22,7 @@ export interface TcpHealthData {
 export interface TransTypeData {
   type: string;
   cnt: number;
+  previousCnt?: number;
   resp: number;
   time: number;
   succ: number;
@@ -32,6 +33,7 @@ export interface TransTypeData {
 export interface ClientData {
   ip: string;
   cnt: number;
+  previousCnt?: number;
   resp: number;
   time: number;
   succ: number;
@@ -93,6 +95,7 @@ export interface TableColumn<T> {
   title: string;
   render?: (value: any, row: T) => React.ReactNode;
   icon?: LucideIcon;
+  tooltip?: string;
 }
 
 export interface TableProps<T> {

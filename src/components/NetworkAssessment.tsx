@@ -12,10 +12,10 @@ export const NetworkAssessment: React.FC<NetworkAssessmentProps> = ({ hasImpact,
   const isHealthy = !hasImpact;
 
   return (
-    <div className={`mx-6 my-4 px-5 py-3.5 border-l-4 rounded-lg ${
+    <div className={`mx-4 sm:mx-6 my-3 sm:my-4 px-4 sm:px-5 py-3 sm:py-3.5 border-l-4 rounded-lg ${
       isHealthy
         ? 'bg-green-50/60 dark:bg-green-900/25 border-green-500 dark:border-green-400'
-        : 'bg-red-50/60 dark:bg-red-900/25 border-red-500 dark:border-red-400'
+        : 'bg-amber-50/60 dark:bg-amber-800/35 border-amber-500 dark:border-amber-400'
     }`}>
       <div className="space-y-2">
         {/* Header with Assessment Badge */}
@@ -23,16 +23,18 @@ export const NetworkAssessment: React.FC<NetworkAssessmentProps> = ({ hasImpact,
           <span className={`text-xs font-bold uppercase tracking-wider ${
             isHealthy
               ? 'text-green-700 dark:text-green-200'
-              : 'text-red-700 dark:text-red-200'
+              : 'text-amber-700 dark:text-amber-200'
           }`}>
             Assessment
           </span>
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-md ${
             isHealthy
               ? 'bg-green-600 dark:bg-green-600'
-              : 'bg-red-600 dark:bg-red-600'
+              : 'bg-amber-300 dark:bg-amber-300'
           }`}>
-            <span className="text-sm font-bold text-white">
+            <span className={`text-sm font-bold ${
+              isHealthy ? 'text-white' : 'text-neutral-900'
+            }`}>
               {isHealthy ? 'No Network Impact' : 'Network Impact Detected'}
             </span>
           </div>
@@ -48,9 +50,9 @@ export const NetworkAssessment: React.FC<NetworkAssessmentProps> = ({ hasImpact,
           ) : (
             <>
               Network layer issues detected -
-              {details.availability === 'error' && <span className="font-medium text-red-700 dark:text-red-300"> Availability degraded</span>}
+              {details.availability === 'error' && <span className="font-medium text-amber-700 dark:text-amber-300"> Availability degraded</span>}
               {details.availability === 'error' && details.performance === 'error' && ', '}
-              {details.performance === 'error' && <span className="font-medium text-red-700 dark:text-red-300"> Performance degraded</span>}
+              {details.performance === 'error' && <span className="font-medium text-amber-700 dark:text-amber-300"> Performance degraded</span>}
               {' '}during alert period.
             </>
           )}

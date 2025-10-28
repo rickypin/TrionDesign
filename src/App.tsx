@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info } from "lucide-react";
 import { motion } from "framer-motion";
@@ -17,10 +17,12 @@ import {
   ReferenceArea,
 } from "recharts";
 import { Card, SectionHeader, KPI, Table, CorrelationInsight, NetworkAssessment } from "@/components";
-import { responseRate, networkHealth, tcpHealth, transType, clients, servers } from "@/data";
 import { useTheme } from "@/hooks/useTheme";
+import { useAlertData } from "@/hooks/useAlertData";
+import { switchScenario, getCurrentScenario } from "@/api/alertApi";
 import { formatNumber } from "@/utils/format";
 import { analyzeCorrelation } from "@/utils/correlationAnalysis";
+import type { ScenarioId } from "@/types/alert";
 
 // IP Tooltip Component
 const IPTooltip: React.FC<{ ip: string; children: React.ReactNode }> = ({ ip, children }) => {
@@ -59,7 +61,7 @@ const IPTooltip: React.FC<{ ip: string; children: React.ReactNode }> = ({ ip, ch
       </span>
       {showTooltip && createPortal(
         <div
-          className="fixed z-[9999] px-4 py-3 rounded-lg shadow-lg whitespace-nowrap bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-neutral-100"
+          className="fixed z-[9999] px-3 py-2.5 rounded-lg shadow-xl whitespace-nowrap bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`
@@ -67,11 +69,39 @@ const IPTooltip: React.FC<{ ip: string; children: React.ReactNode }> = ({ ip, ch
           onMouseEnter={openTooltip}
           onMouseLeave={scheduleClose}
         >
-          <div className="text-sm space-y-2">
-            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Dynatrace</div>
-            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Solarwinds</div>
-            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Netis NPM</div>
-            <div className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">Analyze {ip} in Netis 42</div>
+          <div className="text-sm space-y-1.5">
+            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors group">
+              <div className="h-4 w-4 flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 rounded text-white text-[10px] font-bold">
+                D
+              </div>
+              <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Track {ip} in Dynatrace
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors group">
+              <div className="h-4 w-4 flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-500 rounded text-white text-[10px] font-bold">
+                S
+              </div>
+              <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Track {ip} in SolarWinds
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors group">
+              <div className="h-4 w-4 flex items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-500 rounded text-white text-[10px] font-bold">
+                N
+              </div>
+              <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Track {ip} in Netis NPM
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors group">
+              <div className="h-4 w-4 flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-500 rounded text-white text-[10px] font-bold">
+                42
+              </div>
+              <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Track {ip} in Netis 42
+              </span>
+            </div>
           </div>
         </div>,
         document.body
@@ -155,51 +185,157 @@ const CustomReferenceLabel = ({
 };
 
 export default function App(): React.ReactElement {
-  const [activeChart, setActiveChart] = useState<'network' | 'tcp'>('network');
+  const [currentScenario, setCurrentScenario] = useState<ScenarioId>(getCurrentScenario());
+  const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
+    // S1 (default) defaults to 'network' (Performance)
+    // S2 (networkIssue) defaults to 'tcp' (Availability)
+    currentScenario === 'default' ? 'network' : 'tcp'
+  );
   const { theme, setTheme, resolvedTheme } = useTheme();
+
+  // Fetch all alert data from API
+  const {
+    alertMetadata,
+    scenarioStatus,
+    responseRate,
+    networkHealth,
+    tcpHealth,
+    transType,
+    clients,
+    servers,
+    loading,
+    error,
+    refresh,
+  } = useAlertData();
+
+  // Update activeChart when scenario changes
+  useEffect(() => {
+    // S1 (default) defaults to 'network' (Performance)
+    // S2 (networkIssue) defaults to 'tcp' (Availability)
+    setActiveChart(currentScenario === 'default' ? 'network' : 'tcp');
+  }, [currentScenario]);
+
+  // Handle scenario switch
+  const handleScenarioSwitch = async (scenarioId: ScenarioId) => {
+    try {
+      await switchScenario(scenarioId);
+      setCurrentScenario(scenarioId);
+      // Refresh data after scenario switch
+      await refresh();
+    } catch (err) {
+      console.error('Failed to switch scenario:', err);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
+        <div className="text-neutral-600 dark:text-neutral-400">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || !alertMetadata || !scenarioStatus) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
+        <div className="text-red-600 dark:text-red-400">
+          Error loading data: {error?.message || 'Unknown error'}
+        </div>
+      </div>
+    );
+  }
 
   // Analyze correlation data for insights
   const correlationInsight = analyzeCorrelation(transType, servers, clients);
 
-  // Analyze health status based on problem time window (21:27-21:32)
-  const getHealthStatus = () => {
-    const problemTimes = ['21:27', '21:29', '21:31'];
-
-    // Check Network Health - red if packet loss > 5% or retransmission > 8% during problem period
-    // AND if the curve behavior correlates with transaction response rate degradation
-    const networkIssues = networkHealth.filter(data =>
-      problemTimes.includes(data.t) && (data.loss > 5 || data.retrans > 8)
-    );
-
-    // Analyze curve correlation with transaction response rate
-    // Transaction response rate shows sustained degradation (85.2% -> 77.43% -> 78.9%)
-    // Network metrics show only minor fluctuations, not correlated degradation pattern
-    const hasCurveCorrelation = () => {
-      const networkProblemData = networkHealth.filter(data => problemTimes.includes(data.t));
-      if (networkProblemData.length < 2) return false;
-
-      // Check if network metrics show sustained degradation pattern like transaction rate
-      // Transaction rate: continuous decline then recovery
-      // Network metrics: only minor fluctuations without clear degradation trend
-      const lossTrend = networkProblemData.map(d => d.loss);
-      const retransTrend = networkProblemData.map(d => d.retrans);
-
-      // Network metrics don't show the same sustained degradation pattern
-      return false; // Curves are not correlated in this case
-    };
-
-    // Check TCP Health - red if setup success < 99% or RST > 2.5 during problem period
-    const tcpIssues = tcpHealth.filter(data =>
-      problemTimes.includes(data.t) && (data.setup < 99 || data.rst > 2.5)
-    );
-
-    return {
-      network: (networkIssues.length > 0 && hasCurveCorrelation()) ? 'error' : 'healthy',
-      tcp: tcpIssues.length > 0 ? 'error' : 'healthy'
-    };
+  // Use scenario status from API instead of calculating
+  const healthStatus = {
+    network: scenarioStatus.networkAssessment.details.performance,
+    tcp: scenarioStatus.networkAssessment.details.availability
   };
 
-  const healthStatus = getHealthStatus();
+  // Dynamic column header based on metric type
+  const getCountColumnHeader = () => {
+    switch (alertMetadata.metricType) {
+      case 'transactionCount':
+        return { title: 'Trans CNT', tooltip: 'Transaction Count' };
+      case 'responseRate':
+      case 'avgResponseTime':
+      case 'successRate':
+      default:
+        return { title: 'Timeouts', tooltip: 'Timed-Out Transactions' };
+    }
+  };
+
+  const countColumnHeader = getCountColumnHeader();
+
+  // Dynamic chart configuration based on metric type
+  const getChartConfig = () => {
+    switch (alertMetadata.metricType) {
+      case 'transactionCount':
+        return {
+          yAxisDomain: [0, 1000],
+          yAxisTickFormatter: (v: number) => `${formatNumber(v)}`,
+          tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}/m` : v),
+          lineName: 'Transaction Count',
+        };
+      case 'responseRate':
+      case 'successRate':
+        return {
+          yAxisDomain: [50, 100],
+          yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
+          tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
+          lineName: 'Transaction Response Rate',
+        };
+      case 'avgResponseTime':
+        return {
+          yAxisDomain: [0, 200],
+          yAxisTickFormatter: (v: number) => `${formatNumber(v)}ms`,
+          tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}ms` : v),
+          lineName: 'Average Response Time',
+        };
+      default:
+        return {
+          yAxisDomain: [50, 100],
+          yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
+          tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
+          lineName: 'Transaction Response Rate',
+        };
+    }
+  };
+
+  const chartConfig = getChartConfig();
+
+  // Get reference area color based on network assessment status
+  const getReferenceAreaColor = (chartType: 'network' | 'tcp') => {
+    if (chartType === 'network') {
+      // Performance chart
+      return scenarioStatus.networkAssessment.details.performance === 'error' ? '#f59e0b' : '#16a34a';
+    } else {
+      // Availability chart
+      return scenarioStatus.networkAssessment.details.availability === 'error' ? '#f59e0b' : '#16a34a';
+    }
+  };
+
+  const getReferenceLineColor = (chartType: 'network' | 'tcp') => {
+    const isError = chartType === 'network'
+      ? scenarioStatus.networkAssessment.details.performance === 'error'
+      : scenarioStatus.networkAssessment.details.availability === 'error';
+
+    if (isError) {
+      return {
+        light: '#d97706', // amber-600
+        dark: '#fbbf24'   // amber-400
+      };
+    } else {
+      return {
+        light: '#16a34a', // green-600
+        dark: '#4ade80'   // green-400
+      };
+    }
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
@@ -210,57 +346,91 @@ export default function App(): React.ReactElement {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="flex items-baseline gap-3"
+              className="flex items-baseline gap-2 sm:gap-3"
             >
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
+              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
                 Trion
               </span>
-              <span className="text-xl font-medium text-neutral-600 dark:text-neutral-400 uppercase">
+              <span className="hidden sm:inline text-xl font-medium text-neutral-600 dark:text-neutral-400 uppercase">
                 Intelligent Alert Analysis
               </span>
             </motion.div>
-            
-            {/* Theme Toggle Button */}
-            <button
-              onClick={() => {
-                // 循环切换：light -> dark -> system
-                if (theme === 'light') setTheme('dark');
-                else if (theme === 'dark') setTheme('system');
-                else setTheme('light');
-              }}
-              className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-              title={theme === 'system' ? 'System' : theme === 'light' ? 'Light' : 'Dark'}
-            >
-              {theme === 'system' ? (
-                <Monitor className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
-              ) : resolvedTheme === 'dark' ? (
-                <Moon className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
-              ) : (
-                <Sun className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
-              )}
-            </button>
+
+            {/* Scenario Switcher & Theme Toggle */}
+            <div className="flex items-center gap-2">
+              {/* Scenario Buttons */}
+              <div className="flex items-center gap-2 mr-2">
+                <button
+                  onClick={() => handleScenarioSwitch('default')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    currentScenario === 'default'
+                      ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
+                      : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
+                  }`}
+                  title="Default Scenario - Business Issue"
+                >
+                  <span className={currentScenario === 'default' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
+                    S1
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleScenarioSwitch('networkIssue')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    currentScenario === 'networkIssue'
+                      ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
+                      : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
+                  }`}
+                  title="Network Issue Scenario"
+                >
+                  <span className={currentScenario === 'networkIssue' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
+                    S2
+                  </span>
+                </button>
+              </div>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={() => {
+                  // 循环切换：light -> dark -> system
+                  if (theme === 'light') setTheme('dark');
+                  else if (theme === 'dark') setTheme('system');
+                  else setTheme('light');
+                }}
+                className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                title={theme === 'system' ? 'System' : theme === 'light' ? 'Light' : 'Dark'}
+              >
+                {theme === 'system' ? (
+                  <Monitor className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
+                ) : resolvedTheme === 'dark' ? (
+                  <Moon className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
+                ) : (
+                  <Sun className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="w-full p-4 space-y-4">
+      <main className="w-full p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Alert Summary with Metric Progression */}
         <Card>
           {/* Alert Header */}
           <div className="flex items-center gap-3 p-4 border-b border-neutral-200/70 dark:border-neutral-700">
-            <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/50">
-              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-300" />
+            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 dark:bg-red-600">
+              <AlertTriangle className="h-5 w-5 text-white" />
+              <span className="text-sm font-bold text-white tracking-wide">CRITICAL</span>
             </div>
             <div className="flex-1 flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-700 text-lg">
                 <span className="text-neutral-500 dark:text-neutral-400 font-medium">SPV =</span>
-                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">New Credit Card System</span>
+                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.spv}</span>
                 <span className="text-neutral-400 dark:text-neutral-500 mx-1">·</span>
                 <span className="text-neutral-500 dark:text-neutral-400 font-medium">Component =</span>
-                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">OpenShift</span>
+                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.component}</span>
               </span>
               <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                Response rate dropped
+                {alertMetadata.title}
               </span>
             </div>
           </div>
@@ -275,7 +445,9 @@ export default function App(): React.ReactElement {
                   <Gauge className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 </div>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Response Rate &lt; 85%</div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                {alertMetadata.condition.metric} {alertMetadata.condition.operator} {alertMetadata.condition.threshold}{alertMetadata.condition.unit}
+              </div>
               <div className="text-xs text-neutral-500">Threshold breached</div>
             </div>
 
@@ -287,8 +459,12 @@ export default function App(): React.ReactElement {
                   <Clock className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 </div>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">6 minutes</div>
-              <div className="text-xs text-neutral-500">21:27 – 21:32</div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                {alertMetadata.duration.durationMinutes} minutes
+              </div>
+              <div className="text-xs text-neutral-500">
+                {alertMetadata.duration.start} – {alertMetadata.duration.end}
+              </div>
             </div>
 
             {/* Lowest Point */}
@@ -299,8 +475,10 @@ export default function App(): React.ReactElement {
                   <Target className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 </div>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">77.4%</div>
-              <div className="text-xs text-neutral-500">at 21:30</div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                {alertMetadata.lowestPoint.value}{alertMetadata.lowestPoint.unit}
+              </div>
+              <div className="text-xs text-neutral-500">at {alertMetadata.lowestPoint.time}</div>
             </div>
 
             {/* Status */}
@@ -311,8 +489,12 @@ export default function App(): React.ReactElement {
                   <Info className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 </div>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Recovered</div>
-              <div className="text-xs text-neutral-500">Back to 100% at 21:33</div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                {alertMetadata.status === 'recovered' ? 'Recovered' : alertMetadata.status === 'active' ? 'Active' : 'Acknowledged'}
+              </div>
+              <div className="text-xs text-neutral-500">
+                {alertMetadata.recoveryInfo ? `Back to ${alertMetadata.recoveryInfo.value}${alertMetadata.lowestPoint.unit} at ${alertMetadata.recoveryInfo.time}` : 'Ongoing'}
+              </div>
             </div>
           </div>
 
@@ -330,9 +512,9 @@ export default function App(): React.ReactElement {
                     strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
                   />
                   <XAxis dataKey="t" />
-                  <YAxis domain={[50, 100]} tickFormatter={(v) => `${formatNumber(v)}%`} />
+                  <YAxis domain={chartConfig.yAxisDomain} tickFormatter={chartConfig.yAxisTickFormatter} />
                   <Tooltip
-                    formatter={(v) => (typeof v === "number" ? `${formatNumber(v)}%` : v)}
+                    formatter={chartConfig.tooltipFormatter}
                     contentStyle={{
                       backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
                       border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
@@ -344,10 +526,10 @@ export default function App(): React.ReactElement {
                     }}
                   />
                   <Legend />
-                  <ReferenceArea x1="21:27" x2="21:32" fill="red" fillOpacity={0.1} />
-                  <Line type="monotone" dataKey="rate" name="Transaction Response Rate" stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
+                  <ReferenceArea x1={alertMetadata.duration.start} x2={alertMetadata.duration.end} fill="red" fillOpacity={0.1} />
+                  <Line type="monotone" dataKey="rate" name={chartConfig.lineName} stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
                   <ReferenceLine
-                    x="21:27"
+                    x={alertMetadata.duration.start}
                     stroke={resolvedTheme === 'dark' ? '#f87171' : '#dc2626'}
                     strokeWidth={2}
                     strokeOpacity={0.7}
@@ -356,18 +538,18 @@ export default function App(): React.ReactElement {
                       icon="line"
                       fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
                       isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={[50, 100]}
+                      yAxisDomain={chartConfig.yAxisDomain}
                     />}
                   />
                   <ReferenceLine
-                    x="21:30"
+                    x={alertMetadata.lowestPoint.time}
                     stroke="transparent"
                     label={<CustomReferenceLabel
                       value="Lowest Point"
                       icon="triangle"
-                      fill={resolvedTheme === 'dark' ? '#fb923c' : '#ea580c'}
+                      fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
                       isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={[50, 100]}
+                      yAxisDomain={chartConfig.yAxisDomain}
                     />}
                   />
                   <ReferenceLine
@@ -380,7 +562,7 @@ export default function App(): React.ReactElement {
                       icon="line"
                       fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
                       isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={[50, 100]}
+                      yAxisDomain={chartConfig.yAxisDomain}
                     />}
                   />
                 </LineChart>
@@ -393,7 +575,7 @@ export default function App(): React.ReactElement {
         <Card className="flex flex-col">
           <SectionHeader
             title="Network Layer Impact Assessment"
-            subtitle="Determining if network layer contributed to the alert · Green: No impact · Red: Has impact"
+            subtitle="Determining if network layer contributed to the alert · Green: No impact · Amber: Has impact"
             right={
               <div className="flex gap-2">
                 <button
@@ -406,7 +588,7 @@ export default function App(): React.ReactElement {
                 >
                   <span className={`w-2 h-2 rounded-full ${
                     healthStatus.tcp === 'error'
-                      ? 'bg-red-500 ring-2 ring-red-200 dark:ring-red-800'
+                      ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
                       : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
                   }`} />
                   <span className={activeChart === 'tcp' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
@@ -423,7 +605,7 @@ export default function App(): React.ReactElement {
                 >
                   <span className={`w-2 h-2 rounded-full ${
                     healthStatus.network === 'error'
-                      ? 'bg-red-500 ring-2 ring-red-200 dark:ring-red-800'
+                      ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
                       : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
                   }`} />
                   <span className={activeChart === 'network' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
@@ -436,11 +618,8 @@ export default function App(): React.ReactElement {
 
           {/* Network Assessment Conclusion */}
           <NetworkAssessment
-            hasImpact={healthStatus.network === 'error' || healthStatus.tcp === 'error'}
-            details={{
-              availability: healthStatus.tcp,
-              performance: healthStatus.network
-            }}
+            hasImpact={scenarioStatus.networkAssessment.hasImpact}
+            details={scenarioStatus.networkAssessment.details}
           />
 
           <div className="p-4">
@@ -475,19 +654,19 @@ export default function App(): React.ReactElement {
                       }}
                     />
                     <Legend />
-                    <ReferenceArea x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
+                    <ReferenceArea x1="21:27" x2="21:32" fill={getReferenceAreaColor('network')} fillOpacity={0.1} />
                     <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
                     <Area type="monotone" dataKey="retrans" name="Retransmission" stroke={CHART_COLORS.cyan} fillOpacity={0.2} strokeWidth={2} />
                     <Area type="monotone" dataKey="dupAck" name="Duplicate ACK" stroke={CHART_COLORS.amber} fillOpacity={0.2} strokeWidth={2} />
                     <ReferenceLine
                       x="21:27"
-                      stroke={resolvedTheme === 'dark' ? '#4ade80' : '#16a34a'}
+                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
                     <ReferenceLine
                       x="21:32"
-                      stroke={resolvedTheme === 'dark' ? '#4ade80' : '#16a34a'}
+                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
@@ -522,18 +701,18 @@ export default function App(): React.ReactElement {
                       }}
                     />
                     <Legend />
-                    <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill="green" fillOpacity={0.1} />
+                    <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill={getReferenceAreaColor('tcp')} fillOpacity={0.1} />
                     <ReferenceLine
                       yAxisId="left"
                       x="21:27"
-                      stroke={resolvedTheme === 'dark' ? '#4ade80' : '#16a34a'}
+                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
                     <ReferenceLine
                       yAxisId="left"
                       x="21:32"
-                      stroke={resolvedTheme === 'dark' ? '#4ade80' : '#16a34a'}
+                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
@@ -554,10 +733,10 @@ export default function App(): React.ReactElement {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
-                  Impact Attribution
+                  Business & Infrastructure Breakdown
                 </h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Business & Infrastructure contributors at <span className="font-medium text-neutral-900 dark:text-neutral-100">21:30</span> (response rate dropped to <span className="font-medium text-neutral-900 dark:text-neutral-100">77.4%</span>)
+                  {alertMetadata.contextDescription}
                 </p>
               </div>
             </div>
@@ -566,9 +745,9 @@ export default function App(): React.ReactElement {
           {/* Correlation Insight */}
           <CorrelationInsight insight={correlationInsight} />
 
-          {/* Analysis Tables - Horizontal Layout */}
-          <div className="p-6">
-            <div className="grid grid-cols-3 gap-6 items-start">
+          {/* Analysis Tables - Responsive Layout */}
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
               {/* Trans Type Table */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
@@ -580,12 +759,21 @@ export default function App(): React.ReactElement {
                 <Table
                   keyField="type"
                   colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
+                  highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
                     { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
-                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={transType}
                 />
@@ -602,7 +790,7 @@ export default function App(): React.ReactElement {
                 <Table
                   keyField="ip"
                   colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
+                  highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
                     {
                       key: "ip",
@@ -610,9 +798,18 @@ export default function App(): React.ReactElement {
                       tooltip: "Server IP Address",
                       render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
                     },
-                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={servers}
                 />
@@ -629,7 +826,7 @@ export default function App(): React.ReactElement {
                 <Table
                   keyField="ip"
                   colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
+                  highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
                   columns={[
                     {
                       key: "ip",
@@ -637,9 +834,18 @@ export default function App(): React.ReactElement {
                       tooltip: "Client IP Address",
                       render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
                     },
-                    { key: "cnt", title: "Timeouts", tooltip: "Timed-Out Transactions" },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                     { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                   ]}
                   data={clients}
                 />
