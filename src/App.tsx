@@ -1006,22 +1006,29 @@ export default function App(): React.ReactElement {
                       }}
                     />
                     <Legend />
-                    <ReferenceArea x1="21:27" x2="21:32" fill={getReferenceAreaColor('network')} fillOpacity={0.1} />
+                    <ReferenceArea
+                      x1={alertMetadata.duration.start}
+                      x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}
+                      fill={getReferenceAreaColor('network')}
+                      fillOpacity={0.1}
+                    />
                     <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
                     <Area type="monotone" dataKey="retrans" name="Retransmission" stroke={CHART_COLORS.cyan} fillOpacity={0.2} strokeWidth={2} />
                     <Area type="monotone" dataKey="dupAck" name="Duplicate ACK" stroke={CHART_COLORS.amber} fillOpacity={0.2} strokeWidth={2} />
                     <ReferenceLine
-                      x="21:27"
+                      x={alertMetadata.duration.start}
                       stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
-                    <ReferenceLine
-                      x="21:32"
-                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
-                      strokeWidth={2}
-                      strokeOpacity={0.7}
-                    />
+                    {alertMetadata.duration.end && (
+                      <ReferenceLine
+                        x={alertMetadata.duration.end}
+                        stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
+                        strokeWidth={2}
+                        strokeOpacity={0.7}
+                      />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -1053,21 +1060,29 @@ export default function App(): React.ReactElement {
                       }}
                     />
                     <Legend />
-                    <ReferenceArea yAxisId="left" x1="21:27" x2="21:32" fill={getReferenceAreaColor('tcp')} fillOpacity={0.1} />
+                    <ReferenceArea
+                      yAxisId="left"
+                      x1={alertMetadata.duration.start}
+                      x2={alertMetadata.duration.end || (tcpHealth.length > 0 ? tcpHealth[tcpHealth.length - 1].t : alertMetadata.duration.start)}
+                      fill={getReferenceAreaColor('tcp')}
+                      fillOpacity={0.1}
+                    />
                     <ReferenceLine
                       yAxisId="left"
-                      x="21:27"
+                      x={alertMetadata.duration.start}
                       stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
                       strokeWidth={2}
                       strokeOpacity={0.7}
                     />
-                    <ReferenceLine
-                      yAxisId="left"
-                      x="21:32"
-                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
-                      strokeWidth={2}
-                      strokeOpacity={0.7}
-                    />
+                    {alertMetadata.duration.end && (
+                      <ReferenceLine
+                        yAxisId="left"
+                        x={alertMetadata.duration.end}
+                        stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
+                        strokeWidth={2}
+                        strokeOpacity={0.7}
+                      />
+                    )}
                     <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success %" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
                     <Line yAxisId="right" type="monotone" dataKey="rst" name="TCP RST" stroke={CHART_COLORS.pink} dot={false} strokeWidth={2} />
                   </LineChart>
