@@ -19,7 +19,8 @@ export const CorrelationInsight: React.FC<CorrelationInsightProps> = ({ insight 
               <span className="text-sm font-semibold text-neutral-900">
                 {insight.primaryFactor.type === 'transType' ? 'Trans Type' :
                  insight.primaryFactor.type === 'server' ? 'Server' :
-                 insight.primaryFactor.type === 'client' ? 'Client' : 'Multiple'}:
+                 insight.primaryFactor.type === 'client' ? 'Client' :
+                 insight.primaryFactor.type === 'channel' ? 'Channel' : 'Multiple'}:
               </span>
               <span className="text-sm font-bold text-neutral-900">
                 {insight.primaryFactor.name}

@@ -36,23 +36,42 @@ import {
 } from './default/dimensions';
 
 // Network Issue scenario
-import { 
-  networkIssueAlertMetadata, 
-  networkIssueDimensionConfig, 
-  networkIssueScenarioStatus 
+import {
+  networkIssueAlertMetadata,
+  networkIssueDimensionConfig,
+  networkIssueScenarioStatus
 } from './networkIssue/alert';
-import { 
-  networkIssueResponseRate, 
-  networkIssueNetworkHealth, 
-  networkIssueTcpHealth 
+import {
+  networkIssueResponseRate,
+  networkIssueNetworkHealth,
+  networkIssueTcpHealth
 } from './networkIssue/metrics';
-import { 
-  networkIssueTransType, 
-  networkIssueClients, 
-  networkIssueServers, 
-  networkIssueChannels, 
-  networkIssueReturnCodes 
+import {
+  networkIssueTransType,
+  networkIssueClients,
+  networkIssueServers,
+  networkIssueChannels,
+  networkIssueReturnCodes
 } from './networkIssue/dimensions';
+
+// Placeholder scenario
+import {
+  placeholderAlertMetadata,
+  placeholderDimensionConfig,
+  placeholderScenarioStatus
+} from './placeholder/alert';
+import {
+  placeholderResponseRate,
+  placeholderNetworkHealth,
+  placeholderTcpHealth
+} from './placeholder/metrics';
+import {
+  placeholderTransType,
+  placeholderClients,
+  placeholderServers,
+  placeholderChannels,
+  placeholderReturnCodes
+} from './placeholder/dimensions';
 
 // Scenario data structure
 export interface ScenarioData {
@@ -77,7 +96,7 @@ export interface ScenarioData {
 
 // Scenario registry
 export const scenarios: Record<ScenarioId, ScenarioData> = {
-  default: {
+  'app-gc': {
     alert: {
       metadata: defaultAlertMetadata,
       dimensionConfig: defaultDimensionConfig,
@@ -96,7 +115,7 @@ export const scenarios: Record<ScenarioId, ScenarioData> = {
       returnCodes: defaultReturnCodes
     }
   },
-  networkIssue: {
+  'session-table-full': {
     alert: {
       metadata: networkIssueAlertMetadata,
       dimensionConfig: networkIssueDimensionConfig,
@@ -114,6 +133,25 @@ export const scenarios: Record<ScenarioId, ScenarioData> = {
       channels: networkIssueChannels,
       returnCodes: networkIssueReturnCodes
     }
+  },
+  'pmtud-black-hole': {
+    alert: {
+      metadata: placeholderAlertMetadata,
+      dimensionConfig: placeholderDimensionConfig,
+      status: placeholderScenarioStatus
+    },
+    metrics: {
+      responseRate: placeholderResponseRate,
+      networkHealth: placeholderNetworkHealth,
+      tcpHealth: placeholderTcpHealth
+    },
+    dimensions: {
+      transType: placeholderTransType,
+      clients: placeholderClients,
+      servers: placeholderServers,
+      channels: placeholderChannels,
+      returnCodes: placeholderReturnCodes
+    }
   }
 };
 
@@ -121,7 +159,7 @@ export const scenarios: Record<ScenarioId, ScenarioData> = {
  * Get current scenario data based on localStorage
  */
 export function getCurrentScenarioData(): ScenarioData {
-  const scenarioId = (localStorage.getItem('currentScenario') as ScenarioId) || 'default';
-  return scenarios[scenarioId] || scenarios.default;
+  const scenarioId = (localStorage.getItem('currentScenario') as ScenarioId) || 'app-gc';
+  return scenarios[scenarioId] || scenarios['app-gc'];
 }
 

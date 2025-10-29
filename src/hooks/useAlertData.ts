@@ -4,13 +4,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { 
-  ResponseRateData, 
-  NetworkHealthData, 
+import type {
+  ResponseRateData,
+  NetworkHealthData,
   TcpHealthData,
   TransTypeData,
   ClientData,
-  ServerData
+  ServerData,
+  ChannelData
 } from '@/types';
 import type { AlertMetadata, DimensionConfig, ScenarioStatus } from '@/types/alert';
 import { 
@@ -23,10 +24,11 @@ import {
   fetchNetworkHealth, 
   fetchTcpHealth 
 } from '@/api/metricsApi';
-import { 
-  fetchTransactionTypes, 
-  fetchClients, 
-  fetchServers 
+import {
+  fetchTransactionTypes,
+  fetchClients,
+  fetchServers,
+  fetchChannels
 } from '@/api/dimensionsApi';
 
 export interface UseAlertDataReturn {
@@ -39,12 +41,13 @@ export interface UseAlertDataReturn {
   responseRate: ResponseRateData[];
   networkHealth: NetworkHealthData[];
   tcpHealth: TcpHealthData[];
-  
+
   // Dimension data
   transType: TransTypeData[];
   clients: ClientData[];
   servers: ServerData[];
-  
+  channels: ChannelData[];
+
   // Loading and error states
   loading: boolean;
   error: Error | null;
@@ -71,7 +74,8 @@ export function useAlertData(): UseAlertDataReturn {
   const [transType, setTransType] = useState<TransTypeData[]>([]);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [servers, setServers] = useState<ServerData[]>([]);
-  
+  const [channels, setChannels] = useState<ChannelData[]>([]);
+
   // Loading and error state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -95,6 +99,7 @@ export function useAlertData(): UseAlertDataReturn {
         transTypeData,
         clientsData,
         serversData,
+        channelsData,
       ] = await Promise.all([
         fetchAlertMetadata(),
         fetchDimensionConfig(),
@@ -105,6 +110,7 @@ export function useAlertData(): UseAlertDataReturn {
         fetchTransactionTypes(),
         fetchClients(),
         fetchServers(),
+        fetchChannels(),
       ]);
 
       // Update state
@@ -117,6 +123,7 @@ export function useAlertData(): UseAlertDataReturn {
       setTransType(transTypeData);
       setClients(clientsData);
       setServers(serversData);
+      setChannels(channelsData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch data'));
       console.error('Error fetching alert data:', err);
@@ -140,6 +147,7 @@ export function useAlertData(): UseAlertDataReturn {
     transType,
     clients,
     servers,
+    channels,
     loading,
     error,
     refresh: fetchAllData,

@@ -135,7 +135,7 @@ export interface AlertData {
 // Scenario Types
 // ============================================
 
-export type ScenarioId = 'default' | 'networkIssue';
+export type ScenarioId = 'app-gc' | 'session-table-full' | 'pmtud-black-hole';
 
 export interface ScenarioInfo {
   id: ScenarioId;

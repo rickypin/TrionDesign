@@ -88,15 +88,10 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
   const getRowColorClass = (value: number, row: T): string => {
     if (!colorColumn || typeof value !== 'number') return '';
 
-    // If this is the highlighted row, customize based on content
-    // - For S1 Trans Type "Normal Purchase": use bright yellow (amber-300) with black text for higher contrast, matching badge style
-    // - Otherwise, fallback to amber alert color
+    // If this is the highlighted row (PRIMARY FACTOR), use consistent bright yellow across all scenarios
+    // Bright yellow (amber-300) with black text for high contrast, matching Primary Factor badge style
     if (isHighlighted(row)) {
-      if (String((row as Record<string, any>)['type']) === 'Normal Purchase') {
-        // Bright yellow highlight with black text for contrast - matching Primary Factor badge
-        return 'bg-amber-300 dark:bg-amber-300 text-neutral-900 dark:text-neutral-900 ring-2 ring-amber-400/60 dark:ring-amber-400/60';
-      }
-      return 'bg-amber-100/80 dark:bg-amber-900/40 ring-2 ring-amber-400/60 dark:ring-amber-400/60';
+      return 'bg-amber-300 dark:bg-amber-300 text-neutral-900 dark:text-neutral-900 ring-2 ring-amber-400/60 dark:ring-amber-400/60';
     }
 
     // 计算在当前数据集中的相对强度（0-1之间）

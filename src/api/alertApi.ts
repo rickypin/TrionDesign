@@ -65,6 +65,6 @@ export async function switchScenario(scenarioId: ScenarioId): Promise<void> {
  * Get current scenario ID
  */
 export function getCurrentScenario(): ScenarioId {
-  return (localStorage.getItem('currentScenario') as ScenarioId) || 'default';
+  return (localStorage.getItem('currentScenario') as ScenarioId) || 'app-gc';
 }
 

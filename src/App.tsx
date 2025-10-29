@@ -187,15 +187,16 @@ const CustomReferenceLabel = ({
 export default function App(): React.ReactElement {
   const [currentScenario, setCurrentScenario] = useState<ScenarioId>(getCurrentScenario());
   const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
-    // S1 (default) defaults to 'network' (Performance)
-    // S2 (networkIssue) defaults to 'tcp' (Availability)
-    currentScenario === 'default' ? 'network' : 'tcp'
+    // S1 (app-gc) defaults to 'network' (Performance)
+    // S2 (session-table-full) and S3 (pmtud-black-hole) default to 'tcp' (Availability)
+    currentScenario === 'app-gc' ? 'network' : 'tcp'
   );
   const { theme, setTheme, resolvedTheme } = useTheme();
 
   // Fetch all alert data from API
   const {
     alertMetadata,
+    dimensionConfig,
     scenarioStatus,
     responseRate: rawResponseRate,
     networkHealth,
@@ -203,6 +204,7 @@ export default function App(): React.ReactElement {
     transType,
     clients,
     servers,
+    channels,
     loading,
     error,
     refresh,
@@ -231,11 +233,56 @@ export default function App(): React.ReactElement {
     return rawResponseRate;
   }, [rawResponseRate, alertMetadata]);
 
+  // Analyze correlation data for insights and override with scenario status primary factor if available
+  const correlationInsight = React.useMemo(() => {
+    const calculatedInsight = analyzeCorrelation(transType, servers, clients);
+    const primaryFactor = scenarioStatus?.businessInfraBreakdown.primaryFactor;
+
+    if (!primaryFactor) {
+      return calculatedInsight;
+    }
+
+    // Map dimension ID to type
+    const dimensionTypeMap: Record<string, 'transType' | 'server' | 'client' | 'channel'> = {
+      'transType': 'transType',
+      'serverIp': 'server',
+      'clientIp': 'client',
+      'channel': 'channel'
+    };
+
+    const factorType = dimensionTypeMap[primaryFactor.dimension] || 'transType';
+
+    // Find impact value from the appropriate data source
+    let impact = 0;
+    if (factorType === 'transType') {
+      const item = transType.find(t => t.type === primaryFactor.value);
+      impact = item?.impact || 0;
+    } else if (factorType === 'server') {
+      const item = servers.find(s => s.ip === primaryFactor.value);
+      impact = item?.impact || 0;
+    } else if (factorType === 'client') {
+      const item = clients.find(c => c.ip === primaryFactor.value);
+      impact = item?.impact || 0;
+    } else if (factorType === 'channel') {
+      const item = channels.find(ch => ch.channel === primaryFactor.value);
+      impact = item?.impact || 0;
+    }
+
+    return {
+      ...calculatedInsight,
+      primaryFactor: {
+        type: factorType,
+        name: primaryFactor.value,
+        impact
+      }
+    };
+  }, [scenarioStatus, transType, servers, clients, channels]);
+
   // Update activeChart when scenario changes
   useEffect(() => {
-    // S1 (default) defaults to 'network' (Performance)
-    // S2 (networkIssue) defaults to 'tcp' (Availability)
-    setActiveChart(currentScenario === 'default' ? 'network' : 'tcp');
+    // S1 (app-gc) defaults to 'network' (Performance)
+    // S2 (session-table-full) and S3 (pmtud-black-hole) default to 'tcp' (Availability)
+    setActiveChart(currentScenario === 'app-gc' ? 'network' : 'tcp');
   }, [currentScenario]);
 
   // Handle scenario switch
@@ -270,9 +317,6 @@ export default function App(): React.ReactElement {
     );
   }
 
-  // Analyze correlation data for insights
-  const correlationInsight = analyzeCorrelation(transType, servers, clients);
-
   // Use scenario status from API instead of calculating
   const healthStatus = {
     network: scenarioStatus.networkAssessment.details.performance,
@@ -306,8 +350,10 @@ export default function App(): React.ReactElement {
         };
       case 'responseRate':
       case 'successRate':
+        // S3 scenario (pmtud-black-hole) uses 70-100 range for better visualization
+        const yAxisMin = currentScenario === 'pmtud-black-hole' ? 70 : 50;
         return {
-          yAxisDomain: [50, 100],
+          yAxisDomain: [yAxisMin, 100],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
           lineName: 'Transaction Response Rate',
@@ -384,29 +430,42 @@ export default function App(): React.ReactElement {
               {/* Scenario Buttons */}
               <div className="flex items-center gap-2 mr-2">
                 <button
-                  onClick={() => handleScenarioSwitch('default')}
+                  onClick={() => handleScenarioSwitch('app-gc')}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                    currentScenario === 'default'
+                    currentScenario === 'app-gc'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
                   }`}
-                  title="Default Scenario - Business Issue"
+                  title="S1: App GC Scenario"
                 >
-                  <span className={currentScenario === 'default' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
+                  <span className={currentScenario === 'app-gc' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
                     S1
                   </span>
                 </button>
                 <button
-                  onClick={() => handleScenarioSwitch('networkIssue')}
+                  onClick={() => handleScenarioSwitch('session-table-full')}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                    currentScenario === 'networkIssue'
+                    currentScenario === 'session-table-full'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
                   }`}
-                  title="Network Issue Scenario"
+                  title="S2: Session Table Full Scenario"
                 >
-                  <span className={currentScenario === 'networkIssue' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
+                  <span className={currentScenario === 'session-table-full' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
                     S2
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleScenarioSwitch('pmtud-black-hole')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    currentScenario === 'pmtud-black-hole'
+                      ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
+                      : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
+                  }`}
+                  title="S3: PMTUD Black Hole Scenario"
+                >
+                  <span className={currentScenario === 'pmtud-black-hole' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
+                    S3
                   </span>
                 </button>
               </div>
@@ -575,7 +634,13 @@ export default function App(): React.ReactElement {
                     }}
                   />
                   <Legend />
-                  <ReferenceArea x1={alertMetadata.duration.start} x2={alertMetadata.duration.end} fill="red" fillOpacity={0.1} />
+                  {/* Alert window - from trigger to recovery (or end of data if still active) */}
+                  <ReferenceArea
+                    x1={alertMetadata.duration.start}
+                    x2={alertMetadata.duration.end || (responseRate.length > 0 ? responseRate[responseRate.length - 1].t : alertMetadata.duration.start)}
+                    fill="red"
+                    fillOpacity={0.1}
+                  />
 
                   {/* Static Baseline Line (for response rate) */}
                   {alertMetadata.baseline?.type === 'static' && alertMetadata.baseline.value && (
@@ -678,19 +743,22 @@ export default function App(): React.ReactElement {
                       yAxisDomain={chartConfig.yAxisDomain}
                     />}
                   />
-                  <ReferenceLine
-                    x="21:32"
-                    stroke={resolvedTheme === 'dark' ? '#f87171' : '#dc2626'}
-                    strokeWidth={2}
-                    strokeOpacity={0.7}
-                    label={<CustomReferenceLabel
-                      value="Recovered"
-                      icon="line"
-                      fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
-                      isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={chartConfig.yAxisDomain}
-                    />}
-                  />
+                  {/* Only show Recovered line if status is recovered */}
+                  {alertMetadata.status === 'recovered' && alertMetadata.duration.end && (
+                    <ReferenceLine
+                      x={alertMetadata.duration.end}
+                      stroke={resolvedTheme === 'dark' ? '#f87171' : '#dc2626'}
+                      strokeWidth={2}
+                      strokeOpacity={0.7}
+                      label={<CustomReferenceLabel
+                        value="Recovered"
+                        icon="line"
+                        fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
+                        isDark={resolvedTheme === 'dark'}
+                        yAxisDomain={chartConfig.yAxisDomain}
+                      />}
+                    />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -719,6 +787,35 @@ export default function App(): React.ReactElement {
           {/* Analysis Tables - Responsive Layout */}
           <div className="p-4 sm:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
+              {/* Channel Table - Only show if channel dimension is enabled */}
+              {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                      <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                    </div>
+                    <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Channel</h4>
+                  </div>
+                  <Table
+                    keyField="channel"
+                    colorColumn="impact"
+                    highlightValue={correlationInsight.primaryFactor?.type === 'channel' ? correlationInsight.primaryFactor.name : undefined}
+                    columns={[
+                      { key: "channel", title: "Channel", tooltip: "Channel Name" },
+                      {
+                        key: "cnt",
+                        title: countColumnHeader.title,
+                        tooltip: countColumnHeader.tooltip,
+                        render: (v) => String(v)
+                      },
+                      { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'session-table-full' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate" },
+                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
+                    ]}
+                    data={channels}
+                  />
+                </div>
+              )}
+
               {/* Trans Type Table */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
@@ -743,7 +840,7 @@ export default function App(): React.ReactElement {
                         return `${previous} → ${current}`;
                       }
                     },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'session-table-full' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
                     { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
                   ]}
                   data={transType}

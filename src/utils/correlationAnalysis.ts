@@ -3,7 +3,7 @@ import type { TransTypeData, ServerData, ClientData } from "@/types";
 export interface CorrelationInsight {
   conclusion: string;
   primaryFactor?: {
-    type: 'transType' | 'server' | 'client' | 'distributed';
+    type: 'transType' | 'server' | 'client' | 'channel' | 'distributed';
     name: string;
     impact: number;
   };
@@ -23,6 +23,20 @@ export function analyzeCorrelation(
   servers: ServerData[],
   clients: ClientData[]
 ): CorrelationInsight {
+  // Handle empty arrays
+  if (transTypes.length === 0 || servers.length === 0 || clients.length === 0) {
+    return {
+      conclusion: 'Insufficient data for correlation analysis.',
+      primaryFactor: undefined,
+      distribution: {
+        servers: 'distributed',
+        clients: 'distributed',
+        transTypes: 'distributed'
+      },
+      recommendation: 'Ensure all dimension data is available before performing analysis.'
+    };
+  }
+
   // Calculate distribution patterns
   const serverDistribution = calculateDistribution(servers.map(s => s.impact));
   const clientDistribution = calculateDistribution(clients.map(c => c.impact));
