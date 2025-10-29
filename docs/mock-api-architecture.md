@@ -71,44 +71,67 @@ interface AlertMetadata {
   component: string;              // 组件名称
   title: string;                  // 告警标题
   metricType: 'responseRate' | 'transactionCount' | 'avgResponseTime' | 'successRate';
+  baseline?: BaselineConfig;      // 基线配置（可选）
   condition: {
     metric: string;               // 指标名称
-    operator: '<' | '>' | '=' | '<=';
+    operator: '<' | '>' | '=' | '<=' | '>=';  // 支持 >= 操作符
     threshold: number;
-    unit: '%' | 'ms' | 'count';
+    unit: '%' | 'ms' | 'count' | '/m' | '';   // 支持 /m（每分钟）和空字符串
   };
   duration: {
-    start: string;                // 开始时间
-    end: string;                  // 结束时间
-    durationMinutes: number;
+    start: string;                // 开始时间（ISO 8601 格式）
+    end: string;                  // 结束时间（ISO 8601 格式）
+    durationMinutes: number;      // 持续时长（分钟）
+    startDate?: string;           // 开始日期（YYYY-MM-DD）
+    startDateTime?: string;       // 开始日期时间（YYYY-MM-DD HH:mm）
   };
   lowestPoint: {
     value: number;
-    time: string;
+    time: string;                 // ISO 8601 格式
     unit: string;
   };
-  status: {
-    state: 'active' | 'recovered';
-    recoveryTime?: string;
-    recoveryValue?: number;
+  status: AlertStatus;            // 告警状态（使用 AlertStatus 类型）
+  recoveryInfo?: {                // 恢复信息（可选）
+    recoveryTime: string;         // 恢复时间（ISO 8601 格式）
+    recoveryValue: number;        // 恢复时的值
+    recoveryDuration: number;     // 恢复耗时（分钟）
   };
   contextDescription: string;     // 上下文描述
 }
+
+// 基线配置
+interface BaselineConfig {
+  enabled: boolean;
+  type: 'static' | 'dynamic';
+  value?: number;
+  period?: string;
+}
+
+// 告警状态
+type AlertStatus = 'active' | 'recovered';
 ```
 
 ### DimensionConfig - 维度配置
 
 ```typescript
 interface DimensionConfig {
-  primaryDimension: 'transType' | 'serverIp' | 'clientIp' | 'channel' | 'returnCode';
-  primaryFactor: {
-    dimension: string;
-    value: string;
-    impact: number;               // 影响占比 (%)
-    anomalyScore: number;         // 异常程度 (%)
-  };
+  dimensions: DimensionDefinition[];  // 维度定义数组
+}
+
+// 维度定义
+interface DimensionDefinition {
+  id: string;                         // 维度 ID（如 'transType', 'clientIp'）
+  name: string;                       // 维度显示名称
+  type: 'transType' | 'serverIp' | 'clientIp' | 'channel' | 'returnCode';
+  enabled: boolean;                   // 是否启用
+  priority: number;                   // 优先级（数字越小优先级越高）
 }
 ```
+
+**说明**：
+- 维度配置采用数组结构，支持多个维度的灵活配置
+- 每个维度可独立启用/禁用
+- 通过 `priority` 字段控制维度的展示顺序
 
 ### ScenarioStatus - 场景状态
 
@@ -116,16 +139,26 @@ interface DimensionConfig {
 interface ScenarioStatus {
   networkAssessment: {
     hasImpact: boolean;
+    status: HealthStatus;             // 整体健康状态
     details: {
-      availability: 'normal' | 'error';
-      performance: 'normal' | 'error';
+      availability: HealthStatus;     // 可用性状态
+      performance: HealthStatus;      // 性能状态
     };
   };
   businessInfraBreakdown: {
-    status: 'healthy' | 'error';
+    status: HealthStatus;             // 业务基础设施状态
+    primaryFactor?: string;           // 主要影响因素（可选）
   };
 }
+
+// 健康状态类型
+type HealthStatus = 'healthy' | 'warning' | 'error';
 ```
+
+**说明**：
+- `networkAssessment.status` 表示网络整体健康状态
+- `details` 中的 `availability` 和 `performance` 使用统一的 `HealthStatus` 类型
+- `businessInfraBreakdown.primaryFactor` 用于标识主要影响因素（如 "网络延迟"）
 
 ---
 
@@ -150,6 +183,22 @@ interface ScenarioStatus {
 
 ### 场景管理
 - `POST /api/scenarios/switch` - 切换场景（通过 localStorage）
+- `GET /api/scenarios/current` - 获取当前场景 ID
+
+**实现细节**：
+- 所有 API 端点由 MSW handlers 拦截（`src/mocks/handlers/index.ts`）
+- 场景数据存储在 `src/mocks/data/scenarios/` 目录
+- 场景切换通过 `localStorage.setItem('currentScenario', scenarioId)` 实现
+- `getCurrentScenarioData()` 函数（位于 `src/mocks/data/scenarios/index.ts`）负责读取当前场景并返回对应数据
+
+**场景切换机制**：
+```typescript
+// 在 src/mocks/data/scenarios/index.ts
+export function getCurrentScenarioData() {
+  const currentScenario = localStorage.getItem('currentScenario') || 'default';
+  return scenarioRegistry[currentScenario] || scenarioRegistry.default;
+}
+```
 
 ---
 
@@ -252,30 +301,90 @@ export const tcpHealth: TcpHealthData[] = [
 import type { TransTypeData, ClientData, ServerData, ChannelData, ReturnCodeData } from '@/types';
 
 export const transType: TransTypeData[] = [
-  { name: 'Normal Purchase', timeouts: 450, contrib: 85.2, change: 88.5 },
+  {
+    type: 'Normal Purchase',    // 字段名: type（不是 name）
+    cnt: 450,                   // 字段名: cnt（不是 timeouts）
+    resp: 77.43,                // 响应率 (%)
+    time: 245,                  // 平均响应时间 (ms)
+    succ: 98.5,                 // 成功率 (%)
+    impact: 85.2,               // 字段名: impact（不是 contrib）
+    outlierness: 88.5           // 字段名: outlierness（不是 change）
+  },
   // ... 更多数据
 ];
 
 export const clients: ClientData[] = [
-  { name: '10.10.24.204', timeouts: 380, contrib: 72.1, change: 6.8 },
+  {
+    ip: '10.10.24.204',         // 字段名: ip（不是 name）
+    cnt: 380,                   // 字段名: cnt
+    resp: 75.2,                 // 响应率 (%)
+    time: 258,                  // 平均响应时间 (ms)
+    succ: 97.8,                 // 成功率 (%)
+    impact: 72.1,               // 影响占比 (%)
+    outlierness: 6.8            // 异常程度 (%)
+  },
   // ... 更多数据
 ];
 
 export const servers: ServerData[] = [
-  { name: '10.10.16.30', timeouts: 420, contrib: 79.6, change: 9.2 },
+  {
+    ip: '10.10.16.30',          // 字段名: ip（不是 name）
+    cnt: 420,
+    resp: 76.8,
+    time: 252,
+    succ: 98.2,
+    impact: 79.6,
+    outlierness: 9.2
+  },
   // ... 更多数据
 ];
 
 export const channels: ChannelData[] = [
-  { name: 'Mobile App', timeouts: 520, contrib: 82.5, change: 91.2 },
+  {
+    name: 'Mobile App',         // 渠道使用 name 字段
+    cnt: 520,
+    resp: 74.5,
+    time: 268,
+    succ: 97.2,
+    impact: 82.5,
+    outlierness: 91.2
+  },
   // ... 更多数据
 ];
 
 export const returnCodes: ReturnCodeData[] = [
-  { name: 'Timeout', timeouts: 480, contrib: 88.3, change: 95.1 },
+  {
+    code: 'Timeout',            // 字段名: code（不是 name）
+    cnt: 480,
+    resp: 72.1,
+    time: 285,
+    succ: 96.5,
+    impact: 88.3,
+    outlierness: 95.1
+  },
   // ... 更多数据
 ];
 ```
+
+**字段名说明**：
+
+| 字段 | 含义 | 单位 |
+|------|------|------|
+| `type` / `ip` / `code` / `name` | 维度标识（根据数据类型不同） | - |
+| `cnt` | 交易数量 | 次 |
+| `resp` | 响应率 | % |
+| `time` | 平均响应时间 | ms |
+| `succ` | 成功率 | % |
+| `impact` | 影响占比 | % |
+| `outlierness` | 异常程度 | % |
+
+**注意**：
+- 在 S2（网络问题）场景中，`ResponseRateData` 的 `value` 字段存储的是**交易数量**而非响应率
+- 不同维度类型使用不同的标识字段：
+  - `TransTypeData` 使用 `type`
+  - `ClientData` / `ServerData` 使用 `ip`
+  - `ChannelData` 使用 `name`
+  - `ReturnCodeData` 使用 `code`
 
 ### 步骤 5: 注册场景
 
