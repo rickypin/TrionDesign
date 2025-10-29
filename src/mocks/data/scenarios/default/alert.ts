@@ -9,16 +9,22 @@ export const defaultAlertMetadata: AlertMetadata = {
   component: "OpenShift A",
   title: "Response rate dropped",
   metricType: "responseRate",
+  baseline: {
+    type: 'static',
+    value: 100
+  },
   condition: {
     metric: "Response Rate",
     operator: "<",
-    threshold: 85,
-    unit: "%"
+    threshold: "",
+    unit: "Baseline"
   },
   duration: {
     start: "21:27",
     end: "21:32",
-    durationMinutes: 6
+    durationMinutes: 6,
+    startDate: "2024-01-15",
+    startDateTime: "2024-01-15 21:27"
   },
   lowestPoint: {
     value: 77.4,

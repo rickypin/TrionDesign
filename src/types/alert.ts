@@ -34,28 +34,42 @@ export interface AlertRecoveryInfo {
 
 export type AlertStatus = 'active' | 'recovered' | 'acknowledged';
 
+export interface BaselineConfig {
+  type: 'static' | 'dynamic';
+  value?: number;           // For static baseline (e.g., 100 for response rate)
+  data?: Array<{            // For dynamic baseline (e.g., transaction count)
+    t: string;              // Time
+    baseline: number;       // Baseline value
+    upper?: number;         // Upper bound (optional)
+    lower?: number;         // Lower bound (optional)
+  }>;
+}
+
 export interface AlertMetadata {
   // Alert identification
   spv: string;              // e.g., "New Credit Card System"
   component: string;        // e.g., "OpenShift"
   title: string;            // e.g., "Response rate dropped"
-  
+
   // Alert metric type
   metricType: MetricType;
-  
+
+  // Baseline configuration
+  baseline?: BaselineConfig;
+
   // Alert condition
   condition: AlertCondition;
-  
+
   // Time information
   duration: AlertDuration;
-  
+
   // Key metrics
   lowestPoint: AlertLowestPoint;
-  
+
   // Status
   status: AlertStatus;
   recoveryInfo?: AlertRecoveryInfo;
-  
+
   // Context description (e.g., "Business & Infrastructure contributors at 21:30...")
   contextDescription?: string;
 }

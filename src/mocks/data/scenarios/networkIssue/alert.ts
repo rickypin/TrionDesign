@@ -9,16 +9,41 @@ export const networkIssueAlertMetadata: AlertMetadata = {
   component: "Firewall A",
   title: "Transaction count dropped sharply",
   metricType: "transactionCount",
+  baseline: {
+    type: 'dynamic',
+    data: [
+      { t: "21:21", baseline: 920, upper: 970, lower: 870 },
+      { t: "21:22", baseline: 885, upper: 935, lower: 835 },
+      { t: "21:23", baseline: 910, upper: 960, lower: 860 },
+      { t: "21:24", baseline: 895, upper: 945, lower: 845 },
+      { t: "21:25", baseline: 925, upper: 975, lower: 875 },
+      { t: "21:26", baseline: 905, upper: 955, lower: 855 },
+      { t: "21:27", baseline: 915, upper: 965, lower: 865 },
+      { t: "21:28", baseline: 900, upper: 950, lower: 850 },
+      { t: "21:29", baseline: 910, upper: 960, lower: 860 },
+      { t: "21:30", baseline: 905, upper: 955, lower: 855 },
+      { t: "21:31", baseline: 920, upper: 970, lower: 870 },
+      { t: "21:32", baseline: 910, upper: 960, lower: 860 },
+      { t: "21:33", baseline: 925, upper: 975, lower: 875 },
+      { t: "21:34", baseline: 915, upper: 965, lower: 865 },
+      { t: "21:35", baseline: 890, upper: 940, lower: 840 },
+      { t: "21:36", baseline: 930, upper: 980, lower: 880 },
+      { t: "21:37", baseline: 900, upper: 950, lower: 850 },
+      { t: "21:38", baseline: 920, upper: 970, lower: 870 },
+    ]
+  },
   condition: {
     metric: "Transaction Count",
     operator: "<",
-    threshold: 800,
-    unit: "/m"
+    threshold: "",
+    unit: "Baseline"
   },
   duration: {
     start: "21:27",
     end: "21:32",
-    durationMinutes: 6
+    durationMinutes: 6,
+    startDate: "2024-01-15",
+    startDateTime: "2024-01-15 21:27"
   },
   lowestPoint: {
     value: 520,

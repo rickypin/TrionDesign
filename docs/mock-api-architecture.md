@@ -364,7 +364,7 @@ export type ScenarioId = 'default' | 'networkIssue' | 'highLoad';
   - `hasImpact: false` → 绿色边框
 - Availability/Performance 状态 - 来自 `scenarioStatus.networkAssessment.details`
 
-### 业务与基础设施拆解
+### 业务影响 (Business Impact)
 - 主因标识 - 来自 `dimensionConfig.primaryFactor`
 - 维度表格数据 - 来自对应的 `dimensions.*`
 
@@ -382,7 +382,7 @@ export type ScenarioId = 'default' | 'networkIssue' | 'highLoad';
 2. **类型安全** - 所有数据必须符合 TypeScript 类型定义
 3. **时间一致性** - 确保时序数据的时间点与 `alertMetadata.duration` 对齐
 4. **数据完整性** - 每个场景必须包含所有必需的数据字段
-5. **配色规则** - Network Assessment 和 Business & Infrastructure Breakdown 的状态配色应相反（一个红一个绿）
+5. **配色规则** - Network Assessment 和 Business Impact 的状态配色应相反（一个红一个绿）
 
 ---
 

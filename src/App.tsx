@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info } from "lucide-react";
+import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info, Timer } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -197,7 +197,7 @@ export default function App(): React.ReactElement {
   const {
     alertMetadata,
     scenarioStatus,
-    responseRate,
+    responseRate: rawResponseRate,
     networkHealth,
     tcpHealth,
     transType,
@@ -207,6 +207,29 @@ export default function App(): React.ReactElement {
     error,
     refresh,
   } = useAlertData();
+
+  // Merge baseline data with response rate data
+  const responseRate = React.useMemo(() => {
+    if (!alertMetadata || !rawResponseRate) {
+      return rawResponseRate || [];
+    }
+
+    if (alertMetadata.baseline?.type === 'dynamic' && alertMetadata.baseline.data) {
+      // Create a map of baseline data by time
+      const baselineMap = new Map(
+        alertMetadata.baseline.data.map(b => [b.t, { baseline: b.baseline, upper: b.upper, lower: b.lower }])
+      );
+
+      // Merge baseline data into response rate data
+      return rawResponseRate.map(d => ({
+        ...d,
+        baseline: baselineMap.get(d.t)?.baseline,
+        baselineUpper: baselineMap.get(d.t)?.upper,
+        baselineLower: baselineMap.get(d.t)?.lower,
+      }));
+    }
+    return rawResponseRate;
+  }, [rawResponseRate, alertMetadata]);
 
   // Update activeChart when scenario changes
   useEffect(() => {
@@ -436,7 +459,7 @@ export default function App(): React.ReactElement {
           </div>
 
           {/* Alert Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pt-3 pb-3 border-b border-neutral-200/70 dark:border-neutral-700">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 px-4 pt-3 pb-3 border-b border-neutral-200/70 dark:border-neutral-700">
             {/* Alert Condition */}
             <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
               <div className="flex items-center justify-between">
@@ -448,7 +471,21 @@ export default function App(): React.ReactElement {
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
                 {alertMetadata.condition.metric} {alertMetadata.condition.operator} {alertMetadata.condition.threshold}{alertMetadata.condition.unit}
               </div>
-              <div className="text-xs text-neutral-500">Threshold breached</div>
+              <div className="text-xs text-neutral-500">Sustained for 1 minute</div>
+            </div>
+
+            {/* Trigger Time */}
+            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Trigger Time</p>
+                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
+                  <Clock className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                </div>
+              </div>
+              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                {alertMetadata.duration.start}
+              </div>
+              <div className="text-xs text-neutral-500">{alertMetadata.duration.startDate || "2024-01-15"}</div>
             </div>
 
             {/* Duration */}
@@ -456,15 +493,13 @@ export default function App(): React.ReactElement {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Duration</p>
                 <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Clock className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                  <Timer className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 </div>
               </div>
               <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
                 {alertMetadata.duration.durationMinutes} minutes
               </div>
-              <div className="text-xs text-neutral-500">
-                {alertMetadata.duration.start} – {alertMetadata.duration.end}
-              </div>
+              <div className="text-xs text-neutral-500">{alertMetadata.duration.start} – {alertMetadata.duration.end}</div>
             </div>
 
             {/* Lowest Point */}
@@ -514,7 +549,21 @@ export default function App(): React.ReactElement {
                   <XAxis dataKey="t" />
                   <YAxis domain={chartConfig.yAxisDomain} tickFormatter={chartConfig.yAxisTickFormatter} />
                   <Tooltip
-                    formatter={chartConfig.tooltipFormatter}
+                    formatter={(value: any, name: string, props: any) => {
+                      // For baseline range, show the range instead of individual values
+                      if (name === 'Baseline Range') {
+                        const upper = props.payload.baselineUpper;
+                        const lower = props.payload.baselineLower;
+                        if (upper && lower) {
+                          return [chartConfig.tooltipFormatter(lower) + ' - ' + chartConfig.tooltipFormatter(upper), name];
+                        }
+                      }
+                      // Filter out baselineLower from tooltip (already shown in range)
+                      if (name === 'baselineLower') {
+                        return null;
+                      }
+                      return chartConfig.tooltipFormatter(value);
+                    }}
                     contentStyle={{
                       backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
                       border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
@@ -527,6 +576,83 @@ export default function App(): React.ReactElement {
                   />
                   <Legend />
                   <ReferenceArea x1={alertMetadata.duration.start} x2={alertMetadata.duration.end} fill="red" fillOpacity={0.1} />
+
+                  {/* Static Baseline Line (for response rate) */}
+                  {alertMetadata.baseline?.type === 'static' && alertMetadata.baseline.value && (
+                    <>
+                      <ReferenceLine
+                        y={alertMetadata.baseline.value}
+                        stroke={resolvedTheme === 'dark' ? '#a8a29e' : '#78716c'}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 3"
+                        strokeOpacity={0.7}
+                        label={{
+                          value: 'Baseline',
+                          position: 'right',
+                          fill: resolvedTheme === 'dark' ? '#a8a29e' : '#78716c',
+                          fontSize: 11,
+                          fontWeight: 500
+                        }}
+                      />
+                      {/* Invisible line for legend entry */}
+                      <Line
+                        type="monotone"
+                        dataKey="baseline"
+                        stroke={resolvedTheme === 'dark' ? '#a8a29e' : '#78716c'}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 3"
+                        dot={false}
+                        name="Baseline"
+                        strokeOpacity={0}
+                        legendType="line"
+                      />
+                    </>
+                  )}
+
+                  {/* Dynamic Baseline Band (for transaction count) - render BEFORE main line */}
+                  {alertMetadata.baseline?.type === 'dynamic' && alertMetadata.baseline.data && (
+                    <>
+                      {/* Filled area between upper and lower bounds */}
+                      <Area
+                        type="monotone"
+                        dataKey="baselineUpper"
+                        stroke="none"
+                        fill={resolvedTheme === 'dark' ? '#78716c' : '#d6d3d1'}
+                        fillOpacity={0.4}
+                        legendType="none"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="baselineLower"
+                        stroke="none"
+                        fill={resolvedTheme === 'dark' ? '#171717' : '#ffffff'}
+                        fillOpacity={1}
+                        legendType="none"
+                      />
+                      {/* Upper and lower bound lines */}
+                      <Line
+                        type="monotone"
+                        dataKey="baselineUpper"
+                        stroke={resolvedTheme === 'dark' ? '#a8a29e' : '#78716c'}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 3"
+                        dot={false}
+                        name="Baseline Range"
+                        strokeOpacity={0.7}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="baselineLower"
+                        stroke={resolvedTheme === 'dark' ? '#a8a29e' : '#78716c'}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 3"
+                        dot={false}
+                        legendType="none"
+                        strokeOpacity={0.7}
+                      />
+                    </>
+                  )}
+
                   <Line type="monotone" dataKey="rate" name={chartConfig.lineName} stroke={CHART_COLORS.blue} dot={false} strokeWidth={2} />
                   <ReferenceLine
                     x={alertMetadata.duration.start}
@@ -571,10 +697,139 @@ export default function App(): React.ReactElement {
           </div>
         </Card>
 
-        {/* Second Row: Network Layer Impact Assessment - Full Width */}
+        {/* Second Row: Business Impact - Full Width */}
+        <Card>
+          {/* Section Header */}
+          <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-600">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
+                  Business Impact
+                </h3>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  {alertMetadata.contextDescription}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Correlation Insight */}
+          <CorrelationInsight insight={correlationInsight} />
+
+          {/* Analysis Tables - Responsive Layout */}
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
+              {/* Trans Type Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                    <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
+                </div>
+                <Table
+                  keyField="type"
+                  colorColumn="impact"
+                  highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
+                  columns={[
+                    { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
+                  ]}
+                  data={transType}
+                />
+              </div>
+
+              {/* Server IP Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                    <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
+                </div>
+                <Table
+                  keyField="ip"
+                  colorColumn="impact"
+                  highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
+                  columns={[
+                    {
+                      key: "ip",
+                      title: "Server",
+                      tooltip: "Server IP Address",
+                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                    },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
+                  ]}
+                  data={servers}
+                />
+              </div>
+
+              {/* Client IP Table */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                    <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                  </div>
+                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
+                </div>
+                <Table
+                  keyField="ip"
+                  colorColumn="impact"
+                  highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
+                  columns={[
+                    {
+                      key: "ip",
+                      title: "Client",
+                      tooltip: "Client IP Address",
+                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                    },
+                    {
+                      key: "cnt",
+                      title: countColumnHeader.title,
+                      tooltip: countColumnHeader.tooltip,
+                      render: (v, row) => {
+                        const current = Number(v);
+                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                        return `${previous} → ${current}`;
+                      }
+                    },
+                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
+                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
+                  ]}
+                  data={clients}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+
+        {/* Network Correlation */}
         <Card className="flex flex-col">
           <SectionHeader
-            title="Network Layer Impact Assessment"
+            title="Network Correlation"
             subtitle="Determining if network layer contributed to the alert · Green: No impact · Amber: Has impact"
             right={
               <div className="flex gap-2">
@@ -721,135 +976,6 @@ export default function App(): React.ReactElement {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </div>
-          </div>
-        </Card>
-
-
-        {/* Multi-Dimensional Correlation Analysis */}
-        <Card>
-          {/* Section Header */}
-          <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-600">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
-                  Business & Infrastructure Breakdown
-                </h3>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  {alertMetadata.contextDescription}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Correlation Insight */}
-          <CorrelationInsight insight={correlationInsight} />
-
-          {/* Analysis Tables - Responsive Layout */}
-          <div className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
-              {/* Trans Type Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
-                  </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
-                </div>
-                <Table
-                  keyField="type"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                  ]}
-                  data={transType}
-                />
-              </div>
-
-              {/* Server IP Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
-                  </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
-                </div>
-                <Table
-                  keyField="ip"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    {
-                      key: "ip",
-                      title: "Server",
-                      tooltip: "Server IP Address",
-                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
-                    },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                  ]}
-                  data={servers}
-                />
-              </div>
-
-              {/* Client IP Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
-                  </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
-                </div>
-                <Table
-                  keyField="ip"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    {
-                      key: "ip",
-                      title: "Client",
-                      tooltip: "Client IP Address",
-                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
-                    },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Contrib. (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Contribution Percentage" },
-                  ]}
-                  data={clients}
-                />
-              </div>
             </div>
           </div>
         </Card>
