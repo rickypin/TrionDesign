@@ -17,7 +17,7 @@ import {
   ReferenceArea,
   ReferenceDot,
 } from "recharts";
-import { Card, SectionHeader, KPI, Table, CorrelationInsight, NetworkAssessment } from "@/components";
+import { Card, SectionHeader, KPI, Table, CorrelationInsight } from "@/components";
 import { useTheme } from "@/hooks/useTheme";
 import { useAlertData } from "@/hooks/useAlertData";
 import { switchScenario, getCurrentScenario } from "@/api/alertApi";
@@ -1106,54 +1106,96 @@ export default function App(): React.ReactElement {
 
           {/* Network Correlation - Takes 1 column on xl screens, full width on smaller screens */}
           <Card className="flex flex-col xl:col-span-1">
-          <SectionHeader
-            title="Network Correlation"
-            subtitle="Determining if network layer contributed to the alert · Green: No impact · Amber: Has impact"
-            right={
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => setActiveChart('tcp')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all ${
-                    activeChart === 'tcp'
-                      ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
-                      : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    healthStatus.tcp === 'error'
-                      ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
-                      : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
-                  }`} />
-                  <span className={activeChart === 'tcp' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
-                    Availability
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveChart('network')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all ${
-                    activeChart === 'network'
-                      ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
-                      : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    healthStatus.network === 'error'
-                      ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
-                      : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
-                  }`} />
-                  <span className={activeChart === 'network' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
-                    Performance
-                  </span>
-                </button>
-              </div>
-            }
-          />
+            {/* Section Header - Aligned with Business Impact */}
+            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                Network Correlation
+              </h3>
+            </div>
 
-          {/* Network Assessment Conclusion */}
-          <NetworkAssessment
-            hasImpact={scenarioStatus.networkAssessment.hasImpact}
-            details={scenarioStatus.networkAssessment.details}
-          />
+            {/* Assessment and Metrics in one row */}
+            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Assessment */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
+                    Assessment:
+                  </span>
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md ${
+                    scenarioStatus.networkAssessment.hasImpact
+                      ? 'bg-amber-100 dark:bg-amber-800/35'
+                      : 'bg-green-100 dark:bg-green-900/25'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      scenarioStatus.networkAssessment.hasImpact
+                        ? 'bg-amber-500 ring-2 ring-amber-200 dark:ring-amber-400/60'
+                        : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
+                    }`} />
+                    <span className={`text-sm font-semibold ${
+                      scenarioStatus.networkAssessment.hasImpact
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-green-700 dark:text-green-300'
+                    }`}>
+                      {scenarioStatus.networkAssessment.hasImpact ? 'Network Impact' : 'No Impact'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Separator */}
+                <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600" />
+
+                {/* Metrics with Chart Toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
+                    Metrics:
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setActiveChart('tcp')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
+                        activeChart === 'tcp'
+                          ? 'bg-neutral-200 dark:bg-neutral-600'
+                          : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        healthStatus.tcp === 'error'
+                          ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
+                          : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
+                      }`} />
+                      <span className={`text-sm ${
+                        activeChart === 'tcp'
+                          ? 'text-neutral-900 dark:text-neutral-100 font-medium'
+                          : 'text-neutral-900 dark:text-neutral-100'
+                      }`}>
+                        Availability
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setActiveChart('network')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
+                        activeChart === 'network'
+                          ? 'bg-neutral-200 dark:bg-neutral-600'
+                          : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        healthStatus.network === 'error'
+                          ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
+                          : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
+                      }`} />
+                      <span className={`text-sm ${
+                        activeChart === 'network'
+                          ? 'text-neutral-900 dark:text-neutral-100 font-medium'
+                          : 'text-neutral-900 dark:text-neutral-100'
+                      }`}>
+                        Performance
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
           <div className="p-3">
             {/* Charts */}
