@@ -24,8 +24,8 @@ export const placeholderAlertMetadata: AlertMetadata = {
     start: "21:30",
     end: "",
     durationMinutes: 8,
-    startDate: "2024-01-15",
-    startDateTime: "2024-01-15 21:30"
+    startDate: "2024-10-29",
+    startDateTime: "2024-10-29 21:30"
   },
   lowestPoint: {
     value: 88.3,

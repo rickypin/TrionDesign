@@ -5,24 +5,24 @@
 import type { ResponseRateData, NetworkHealthData, TcpHealthData } from '@/types';
 
 export const defaultResponseRate: ResponseRateData[] = [
-  { t: "21:21", rate: 100 },
-  { t: "21:22", rate: 100 },
-  { t: "21:23", rate: 100 },
-  { t: "21:24", rate: 100 },
-  { t: "21:25", rate: 100 },
-  { t: "21:26", rate: 100 },
-  { t: "21:27", rate: 85.2 },
-  { t: "21:28", rate: 82.1 },
-  { t: "21:29", rate: 79.8 },
-  { t: "21:30", rate: 77.43 },
-  { t: "21:31", rate: 78.9 },
-  { t: "21:32", rate: 81.4 },
-  { t: "21:33", rate: 100 },
-  { t: "21:34", rate: 100 },
-  { t: "21:35", rate: 100 },
-  { t: "21:36", rate: 100 },
-  { t: "21:37", rate: 100 },
-  { t: "21:38", rate: 100 },
+  { t: "21:21", rate: 99.2 },  // 基线水平
+  { t: "21:22", rate: 99.3 },
+  { t: "21:23", rate: 99.1 },
+  { t: "21:24", rate: 99.2 },
+  { t: "21:25", rate: 99.3 },
+  { t: "21:26", rate: 99.2 },
+  { t: "21:27", rate: 45.8 },  // GC 开始，急剧下降
+  { t: "21:28", rate: 18.5 },  // 继续恶化
+  { t: "21:29", rate: 10.2 },  // 接近最低点
+  { t: "21:30", rate: 7.8 },   // 最低点 - GC 暂停最严重
+  { t: "21:31", rate: 12.5 },  // 开始恢复
+  { t: "21:32", rate: 38.7 },  // 快速恢复
+  { t: "21:33", rate: 99.2 },  // 恢复到基线 - GC 结束
+  { t: "21:34", rate: 99.3 },
+  { t: "21:35", rate: 99.1 },
+  { t: "21:36", rate: 99.2 },
+  { t: "21:37", rate: 99.3 },
+  { t: "21:38", rate: 99.2 },
 ];
 
 export const defaultNetworkHealth: NetworkHealthData[] = [

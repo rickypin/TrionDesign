@@ -24,6 +24,7 @@ export interface TransTypeData {
   cnt: number;
   previousCnt?: number;
   resp: number;
+  previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
   succ: number;
   impact: number;
@@ -35,6 +36,7 @@ export interface ClientData {
   cnt: number;
   previousCnt?: number;
   resp: number;
+  previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
   succ: number;
   impact: number;
@@ -44,7 +46,9 @@ export interface ClientData {
 export interface ChannelData {
   channel: string;
   cnt: number;
+  previousCnt?: number;
   resp: number;
+  previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
   succ: number;
   impact: number;
@@ -54,6 +58,7 @@ export interface ServerData {
   ip: string;
   cnt: number;
   resp: number;
+  previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
   succ: number;
   impact: number;
@@ -63,10 +68,13 @@ export interface ServerData {
 export interface ReturnCodeData {
   code: number | string;
   cnt: number;
+  previousCnt?: number;  // Previous transaction count for baseline comparison
   resp: number;
+  previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
   succ: number;
   impact: number;
+  outlierness?: number;
 }
 
 // --- Component Props Types ---

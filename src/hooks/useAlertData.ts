@@ -11,7 +11,8 @@ import type {
   TransTypeData,
   ClientData,
   ServerData,
-  ChannelData
+  ChannelData,
+  ReturnCodeData
 } from '@/types';
 import type { AlertMetadata, DimensionConfig, ScenarioStatus } from '@/types/alert';
 import { 
@@ -28,7 +29,8 @@ import {
   fetchTransactionTypes,
   fetchClients,
   fetchServers,
-  fetchChannels
+  fetchChannels,
+  fetchReturnCodes
 } from '@/api/dimensionsApi';
 
 export interface UseAlertDataReturn {
@@ -47,6 +49,7 @@ export interface UseAlertDataReturn {
   clients: ClientData[];
   servers: ServerData[];
   channels: ChannelData[];
+  returnCodes: ReturnCodeData[];
 
   // Loading and error states
   loading: boolean;
@@ -75,6 +78,7 @@ export function useAlertData(): UseAlertDataReturn {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [servers, setServers] = useState<ServerData[]>([]);
   const [channels, setChannels] = useState<ChannelData[]>([]);
+  const [returnCodes, setReturnCodes] = useState<ReturnCodeData[]>([]);
 
   // Loading and error state
   const [loading, setLoading] = useState(true);
@@ -100,6 +104,7 @@ export function useAlertData(): UseAlertDataReturn {
         clientsData,
         serversData,
         channelsData,
+        returnCodesData,
       ] = await Promise.all([
         fetchAlertMetadata(),
         fetchDimensionConfig(),
@@ -111,6 +116,7 @@ export function useAlertData(): UseAlertDataReturn {
         fetchClients(),
         fetchServers(),
         fetchChannels(),
+        fetchReturnCodes(),
       ]);
 
       // Update state
@@ -124,6 +130,7 @@ export function useAlertData(): UseAlertDataReturn {
       setClients(clientsData);
       setServers(serversData);
       setChannels(channelsData);
+      setReturnCodes(returnCodesData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch data'));
       console.error('Error fetching alert data:', err);
@@ -148,6 +155,7 @@ export function useAlertData(): UseAlertDataReturn {
     clients,
     servers,
     channels,
+    returnCodes,
     loading,
     error,
     refresh: fetchAllData,

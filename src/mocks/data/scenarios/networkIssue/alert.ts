@@ -42,8 +42,8 @@ export const networkIssueAlertMetadata: AlertMetadata = {
     start: "21:27",
     end: "21:32",
     durationMinutes: 6,
-    startDate: "2024-01-15",
-    startDateTime: "2024-01-15 21:27"
+    startDate: "2024-10-29",
+    startDateTime: "2024-10-29 21:27"
   },
   lowestPoint: {
     value: 520,

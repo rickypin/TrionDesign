@@ -19,6 +19,8 @@ export interface AlertDuration {
   start: string;            // e.g., "21:27"
   end: string;              // e.g., "21:32"
   durationMinutes: number;  // e.g., 6
+  startDate?: string;       // e.g., "2024-10-29"
+  startDateTime?: string;   // e.g., "2024-10-29 21:27"
 }
 
 export interface AlertLowestPoint {

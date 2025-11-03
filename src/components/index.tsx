@@ -43,18 +43,18 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title,
   const styles = getIconStyles();
 
   return (
-    <div className="flex items-center justify-between gap-3 p-4 border-b border-neutral-200/70 dark:border-neutral-700">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-neutral-200/70 dark:border-neutral-700">
+      <div className="flex items-center gap-2">
         {Icon && (
-          <div className={`p-2 rounded-xl ${styles.container}`}>
-            <Icon className={`h-5 w-5 ${styles.icon}`} />
+          <div className={`p-1.5 rounded-xl ${styles.container}`}>
+            <Icon className={`h-4 w-4 ${styles.icon}`} />
           </div>
         )}
         <div>
           <h3 className="text-base font-semibold leading-tight">
             {typeof title === 'string' ? title : title}
           </h3>
-          {subtitle && <p className="text-xs text-neutral-500 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-neutral-500 mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {right}
@@ -157,18 +157,18 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
 
   return (
     <div className="overflow-x-auto overflow-y-hidden rounded-lg border border-neutral-200 dark:border-neutral-700">
-      <table className="min-w-full text-sm border-separate border-spacing-0">
+      <table className="min-w-full text-xs border-separate border-spacing-0">
         <thead className="text-neutral-500 dark:text-neutral-400">
           <tr className="border-b-2 border-neutral-300 dark:border-neutral-600">
             {columns.map((c, index) => (
               <th
                 key={String(c.key)}
-                className={`px-2.5 py-2.5 font-medium whitespace-nowrap bg-neutral-100/80 dark:bg-neutral-700/60 ${index === 0 ? 'text-left' : 'text-right'} cursor-help`}
+                className={`px-2 py-2 font-medium whitespace-nowrap bg-neutral-100/80 dark:bg-neutral-700/60 ${index === 0 ? 'text-left' : 'text-right'} cursor-help`}
                 title={c.tooltip}
               >
                 <div className={`flex items-center gap-1 ${index === 0 ? '' : 'justify-end'}`}>
                   {c.title}
-                  {c.icon && <c.icon className="h-4 w-4" />}
+                  {c.icon && <c.icon className="h-3.5 w-3.5" />}
                 </div>
               </th>
             ))}
@@ -186,7 +186,7 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
                 } ${isBold ? 'font-semibold' : 'font-normal'}`}
               >
                 {columns.map((c, index) => (
-                  <td key={String(c.key)} className={`px-2.5 py-2.5 whitespace-nowrap ${index === 0 ? 'text-left' : 'text-right'}`}>{c.render ? c.render(row[c.key], row) : row[c.key]}</td>
+                  <td key={String(c.key)} className={`px-2 py-2 whitespace-nowrap ${index === 0 ? 'text-left' : 'text-right'}`}>{c.render ? c.render(row[c.key], row) : row[c.key]}</td>
                 ))}
               </tr>
             );

@@ -7,36 +7,36 @@ import type { AlertMetadata, DimensionConfig, ScenarioStatus } from '@/types/ale
 export const defaultAlertMetadata: AlertMetadata = {
   spv: "New Credit Card System",
   component: "OpenShift A",
-  title: "Response rate dropped",
-  metricType: "responseRate",
+  title: "Success rate dropped sharply",
+  metricType: "successRate",
   baseline: {
     type: 'static',
-    value: 100
+    value: 99.2  // 日常基线成功率
   },
   condition: {
-    metric: "Response Rate",
+    metric: "Success Rate",
     operator: "<",
-    threshold: "",
-    unit: "Baseline"
+    threshold: "90",
+    unit: "%"
   },
   duration: {
     start: "21:27",
     end: "21:32",
     durationMinutes: 6,
-    startDate: "2024-01-15",
-    startDateTime: "2024-01-15 21:27"
+    startDate: "2024-10-29",
+    startDateTime: "2024-10-29 21:27"
   },
   lowestPoint: {
-    value: 77.4,
+    value: 7.8,
     time: "21:30",
     unit: "%"
   },
   status: "recovered",
   recoveryInfo: {
     time: "21:33",
-    value: 100
+    value: 99.2  // 恢复到基线水平
   },
-  contextDescription: "Analyzing dimensional contributors at 21:30 when response rate dropped to 77.4%"
+  contextDescription: "Analyzing dimensional contributors at 21:30 when success rate dropped to 7.8% due to application GC pause"
 };
 
 export const defaultDimensionConfig: DimensionConfig = {

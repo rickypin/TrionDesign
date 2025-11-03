@@ -41,3 +41,22 @@ export function formatNumber(value: number): string {
   return formatted;
 }
 
+/**
+ * 格式化日期为 "Oct 29" 格式
+ * @param dateString - 日期字符串，格式为 "YYYY-MM-DD"
+ * @returns 格式化后的日期，如 "Oct 29"
+ *
+ * 示例：
+ * - formatDate("2024-10-29") => "Oct 29"
+ * - formatDate("2024-01-15") => "Jan 15"
+ */
+export function formatDate(dateString: string): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const [year, month, day] = dateString.split('-');
+  const monthIndex = parseInt(month, 10) - 1;
+  const dayNumber = parseInt(day, 10);
+
+  return `${months[monthIndex]} ${dayNumber}`;
+}
+

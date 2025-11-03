@@ -15,12 +15,13 @@ import {
   Area,
   ReferenceLine,
   ReferenceArea,
+  ReferenceDot,
 } from "recharts";
 import { Card, SectionHeader, KPI, Table, CorrelationInsight, NetworkAssessment } from "@/components";
 import { useTheme } from "@/hooks/useTheme";
 import { useAlertData } from "@/hooks/useAlertData";
 import { switchScenario, getCurrentScenario } from "@/api/alertApi";
-import { formatNumber } from "@/utils/format";
+import { formatNumber, formatDate } from "@/utils/format";
 import { analyzeCorrelation } from "@/utils/correlationAnalysis";
 import type { ScenarioId } from "@/types/alert";
 
@@ -127,7 +128,9 @@ const CustomReferenceLabel = ({
   icon,
   fill,
   isDark,
-  yAxisDomain = [50, 100]
+  yAxisDomain = [50, 100],
+  metricValue,
+  metricUnit
 }: {
   viewBox?: { x?: number; y?: number; width?: number; height?: number };
   value: string;
@@ -135,6 +138,8 @@ const CustomReferenceLabel = ({
   fill: string;
   isDark: boolean;
   yAxisDomain?: [number, number];
+  metricValue?: number;
+  metricUnit?: string;
 }) => {
   if (!viewBox || viewBox.x === undefined || viewBox.y === undefined || viewBox.height === undefined) return null;
 
@@ -150,6 +155,10 @@ const CustomReferenceLabel = ({
   const iconSize = 8;
   const iconCenterY = chartTop - 10; // Icon center 10px above the 100% line
   const textY = iconCenterY - 10; // Text baseline 10px above icon center
+
+  // If metric value is provided, add extra space for the value text
+  const hasMetricValue = metricValue !== undefined && metricUnit !== undefined;
+  const valueTextY = hasMetricValue ? textY - 12 : textY; // Move label text up if showing value
 
   return (
     <g>
@@ -170,9 +179,10 @@ const CustomReferenceLabel = ({
           fill={fill}
         />
       )}
+      {/* Label text */}
       <text
         x={x}
-        y={textY}
+        y={valueTextY}
         textAnchor="middle"
         fill={fill}
         fontSize={11}
@@ -180,6 +190,19 @@ const CustomReferenceLabel = ({
       >
         {value}
       </text>
+      {/* Metric value text (if provided) */}
+      {hasMetricValue && (
+        <text
+          x={x}
+          y={textY}
+          textAnchor="middle"
+          fill={fill}
+          fontSize={13}
+          fontWeight={700}
+        >
+          {metricValue}{metricUnit}
+        </text>
+      )}
     </g>
   );
 };
@@ -205,6 +228,7 @@ export default function App(): React.ReactElement {
     clients,
     servers,
     channels,
+    returnCodes,
     loading,
     error,
     refresh,
@@ -349,14 +373,21 @@ export default function App(): React.ReactElement {
           lineName: 'Transaction Count',
         };
       case 'responseRate':
-      case 'successRate':
         // S3 scenario (pmtud-black-hole) uses 70-100 range for better visualization
-        const yAxisMin = currentScenario === 'pmtud-black-hole' ? 70 : 50;
+        const yAxisMinResponse = currentScenario === 'pmtud-black-hole' ? 70 : 50;
         return {
-          yAxisDomain: [yAxisMin, 100],
+          yAxisDomain: [yAxisMinResponse, 100],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
           lineName: 'Transaction Response Rate',
+        };
+      case 'successRate':
+        const yAxisMinSuccess = currentScenario === 'pmtud-black-hole' ? 70 : 50;
+        return {
+          yAxisDomain: [yAxisMinSuccess, 100],
+          yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
+          tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
+          lineName: 'Transaction Success Rate',
         };
       case 'avgResponseTime':
         return {
@@ -376,6 +407,25 @@ export default function App(): React.ReactElement {
   };
 
   const chartConfig = getChartConfig();
+
+  // Dynamic success rate column configuration based on metric type
+  const getSuccessRateColumnConfig = () => {
+    switch (alertMetadata.metricType) {
+      case 'successRate':
+        return {
+          title: 'Success Rate',
+          tooltip: 'Success rate: baseline% → current% (↓ decline in percentage points)',
+        };
+      case 'responseRate':
+      default:
+        return {
+          title: 'Response Rate',
+          tooltip: 'Success rate: baseline% → current% (↓ decline in percentage points)',
+        };
+    }
+  };
+
+  const successRateColumnConfig = getSuccessRateColumnConfig();
 
   // Get reference area color based on network assessment status
   const getReferenceAreaColor = (chartType: 'network' | 'tcp') => {
@@ -495,108 +545,48 @@ export default function App(): React.ReactElement {
       </header>
 
       <main className="w-full p-3 sm:p-4 space-y-3 sm:space-y-4">
-        {/* Alert Summary with Metric Progression */}
+        {/* Alert Summary */}
         <Card>
-          {/* Alert Header */}
-          <div className="flex items-center gap-3 p-4 border-b border-neutral-200/70 dark:border-neutral-700">
-            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 dark:bg-red-600">
-              <AlertTriangle className="h-5 w-5 text-white" />
-              <span className="text-sm font-bold text-white tracking-wide">CRITICAL</span>
-            </div>
-            <div className="flex-1 flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-700 text-lg">
-                <span className="text-neutral-500 dark:text-neutral-400 font-medium">SPV =</span>
-                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.spv}</span>
-                <span className="text-neutral-400 dark:text-neutral-500 mx-1">·</span>
-                <span className="text-neutral-500 dark:text-neutral-400 font-medium">Component =</span>
-                <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.component}</span>
-              </span>
-              <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.title}
-              </span>
-            </div>
-          </div>
-
-          {/* Alert Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 px-4 pt-3 pb-3 border-b border-neutral-200/70 dark:border-neutral-700">
-            {/* Alert Condition */}
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Alert Condition</p>
-                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Gauge className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                </div>
+          {/* Alert Header with Time Info */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 border-b border-neutral-200/70 dark:border-neutral-700">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-600 dark:bg-red-600">
+                <AlertTriangle className="h-4 w-4 text-white" />
+                <span className="text-xs font-bold text-white tracking-wide">CRITICAL</span>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.condition.metric} {alertMetadata.condition.operator} {alertMetadata.condition.threshold}{alertMetadata.condition.unit}
+              <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700 text-sm">
+                  <span className="text-neutral-500 dark:text-neutral-400 font-medium">SPV =</span>
+                  <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.spv}</span>
+                  <span className="text-neutral-400 dark:text-neutral-500 mx-0.5">·</span>
+                  <span className="text-neutral-500 dark:text-neutral-400 font-medium">Component =</span>
+                  <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{alertMetadata.component}</span>
+                </span>
+                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  {alertMetadata.title}
+                </span>
               </div>
-              <div className="text-xs text-neutral-500">Sustained for 1 minute</div>
             </div>
 
-            {/* Trigger Time */}
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Trigger Time</p>
-                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Clock className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                </div>
+            {/* Time Information */}
+            <div className="flex items-center gap-2 text-xs">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-50 dark:bg-neutral-700/50 border border-neutral-200/50 dark:border-neutral-600/40">
+                <Clock className="h-3 w-3 text-neutral-500 dark:text-neutral-400" />
+                <span className="text-neutral-600 dark:text-neutral-400">Triggered:</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                  {alertMetadata.duration.startDate && formatDate(alertMetadata.duration.startDate)} {alertMetadata.duration.start}
+                </span>
               </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.duration.start}
-              </div>
-              <div className="text-xs text-neutral-500">{alertMetadata.duration.startDate || "2024-01-15"}</div>
-            </div>
-
-            {/* Duration */}
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Duration</p>
-                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Timer className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                </div>
-              </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.duration.durationMinutes} minutes
-              </div>
-              <div className="text-xs text-neutral-500">{alertMetadata.duration.start} – {alertMetadata.duration.end}</div>
-            </div>
-
-            {/* Lowest Point */}
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Lowest Point</p>
-                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Target className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                </div>
-              </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.lowestPoint.value}{alertMetadata.lowestPoint.unit}
-              </div>
-              <div className="text-xs text-neutral-500">at {alertMetadata.lowestPoint.time}</div>
-            </div>
-
-            {/* Status */}
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-700/40 border border-neutral-200/50 dark:border-neutral-600/40">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Status</p>
-                <div className="p-1 rounded bg-neutral-100 dark:bg-neutral-600/50">
-                  <Info className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                </div>
-              </div>
-              <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {alertMetadata.status === 'recovered' ? 'Recovered' : alertMetadata.status === 'active' ? 'Active' : 'Acknowledged'}
-              </div>
-              <div className="text-xs text-neutral-500">
-                {alertMetadata.recoveryInfo ? `Back to ${alertMetadata.recoveryInfo.value}${alertMetadata.lowestPoint.unit} at ${alertMetadata.recoveryInfo.time}` : 'Ongoing'}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-50 dark:bg-neutral-700/50 border border-neutral-200/50 dark:border-neutral-600/40">
+                <Timer className="h-3 w-3 text-neutral-500 dark:text-neutral-400" />
+                <span className="text-neutral-600 dark:text-neutral-400">Duration:</span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">{alertMetadata.duration.durationMinutes}m</span>
               </div>
             </div>
           </div>
 
           {/* Metric Progression Chart */}
           <div className="px-4 pb-3 pt-3">
-            <div className="mb-2">
-              <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Metric Progression</h4>
-            </div>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 32, bottom: 8 }} syncId="timeSeriesSync">
@@ -741,7 +731,19 @@ export default function App(): React.ReactElement {
                       fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
                       isDark={resolvedTheme === 'dark'}
                       yAxisDomain={chartConfig.yAxisDomain}
+                      metricValue={alertMetadata.lowestPoint.value}
+                      metricUnit={alertMetadata.lowestPoint.unit}
                     />}
+                  />
+                  {/* Lowest Point Marker on the curve */}
+                  <ReferenceDot
+                    x={alertMetadata.lowestPoint.time}
+                    y={alertMetadata.lowestPoint.value}
+                    r={6}
+                    fill={resolvedTheme === 'dark' ? '#dc2626' : '#dc2626'}
+                    stroke={resolvedTheme === 'dark' ? '#fca5a5' : '#ffffff'}
+                    strokeWidth={3}
+                    isFront={true}
                   />
                   {/* Only show Recovered line if status is recovered */}
                   {alertMetadata.status === 'recovered' && alertMetadata.duration.end && (
@@ -765,180 +767,359 @@ export default function App(): React.ReactElement {
           </div>
         </Card>
 
-        {/* Second Row: Business Impact - Full Width */}
-        <Card>
-          {/* Section Header */}
-          <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-600">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1.5">
-                  Business Impact
-                </h3>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  {alertMetadata.contextDescription}
-                </p>
-              </div>
+        {/* Responsive Layout: Business Impact (2/3) + Network Correlation (1/3) */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4">
+          {/* Business Impact - Takes 2 columns on xl screens, full width on smaller screens */}
+          <Card className="xl:col-span-2">
+            {/* Section Header */}
+            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                Business Impact
+              </h3>
             </div>
-          </div>
 
-          {/* Correlation Insight */}
-          <CorrelationInsight insight={correlationInsight} />
+            {/* Summary Header - Most Impacted and Affected in one line */}
+            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
+              {(() => {
+                // Find top factor from correlation insight
+                const topFactor = correlationInsight.primaryFactor;
 
-          {/* Analysis Tables - Responsive Layout */}
-          <div className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
-              {/* Channel Table - Only show if channel dimension is enabled */}
-              {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                    <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                      <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                if (!topFactor) {
+                  return (
+                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                      Analyzing dimensional impact...
                     </div>
-                    <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Channel</h4>
+                  );
+                }
+
+                // Get dimension type label
+                const getDimensionLabel = (type: string) => {
+                  switch (type) {
+                    case 'transType': return 'Trans Type';
+                    case 'server': return 'Server IP';
+                    case 'client': return 'Client IP';
+                    case 'channel': return 'Channel';
+                    default: return 'Dimension';
+                  }
+                };
+
+                return (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Most Impacted */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
+                        Most Impacted:
+                      </span>
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                          {getDimensionLabel(topFactor.type)}
+                        </span>
+                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                          {topFactor.name}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600" />
+
+                    {/* Affected */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Affected:</span>
+
+                      {/* Trans Type Count */}
+                      {transType.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                          <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                            {transType.length} Trans Type{transType.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Server IP Count */}
+                      {servers.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                          <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                            {servers.length} Server IP{servers.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Client IP Count */}
+                      {clients.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                          <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                            {clients.length} Client IP{clients.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Channel Count - Only show if channel dimension is enabled */}
+                      {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                          <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                            {channels.length} Channel{channels.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Analysis Tables - Responsive Layout */}
+            <div className="p-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                {/* Channel Table - Only show if channel dimension is enabled */}
+                {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                      <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                        <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
+                      </div>
+                      <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Channel</h4>
+                    </div>
+                    <Table
+                      keyField="channel"
+                      colorColumn="impact"
+                      highlightValue={correlationInsight.primaryFactor?.type === 'channel' ? correlationInsight.primaryFactor.name : undefined}
+                      columns={[
+                        { key: "channel", title: "Channel", tooltip: "Channel Name" },
+                        {
+                          key: "cnt",
+                          title: "Transaction Volume",
+                          tooltip: "Transaction count: baseline → current (Δ = change)",
+                          render: (v, row) => {
+                            const current = Number(v);
+                            const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                            const delta = current - previous;
+                            return `${previous.toLocaleString()} → ${current.toLocaleString()} (Δ ${delta >= 0 ? '+' : ''}${delta.toLocaleString()})`;
+                          }
+                        },
+                        {
+                          key: "succ",
+                          title: successRateColumnConfig.title,
+                          tooltip: successRateColumnConfig.tooltip,
+                          render: (v, row) => {
+                            const currentRate = Number(v);
+                            const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
+                            const decline = Math.max(0, previousRate - currentRate);
+                            return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
+                          }
+                        },
+                        { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                      ]}
+                      data={channels}
+                    />
+                  </div>
+                )}
+
+                {/* Trans Type Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                      <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
+                    </div>
+                    <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
                   </div>
                   <Table
-                    keyField="channel"
+                    keyField="type"
                     colorColumn="impact"
-                    highlightValue={correlationInsight.primaryFactor?.type === 'channel' ? correlationInsight.primaryFactor.name : undefined}
+                    highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
                     columns={[
-                      { key: "channel", title: "Channel", tooltip: "Channel Name" },
+                      { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
                       {
                         key: "cnt",
-                        title: countColumnHeader.title,
-                        tooltip: countColumnHeader.tooltip,
-                        render: (v) => String(v)
+                        title: "Transaction Volume",
+                        tooltip: "Transaction count: baseline → current (Δ = change)",
+                        render: (v, row) => {
+                          const current = Number(v);
+                          const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                          const delta = current - previous;
+                          return `${previous.toLocaleString()} → ${current.toLocaleString()} (Δ ${delta >= 0 ? '+' : ''}${delta.toLocaleString()})`;
+                        }
                       },
-                      { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'session-table-full' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate" },
-                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
+                      {
+                        key: "succ",
+                        title: successRateColumnConfig.title,
+                        tooltip: successRateColumnConfig.tooltip,
+                        render: (v, row) => {
+                          const currentRate = Number(v);
+                          const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
+                          const decline = Math.max(0, previousRate - currentRate);
+                          return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
+                        }
+                      },
+                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
                     ]}
-                    data={channels}
+                    data={transType}
                   />
                 </div>
-              )}
 
-              {/* Trans Type Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <BarChart3 className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                {/* Return Code Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                      <Activity className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
+                    </div>
+                    <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Return Code</h4>
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
+                  <Table
+                    keyField="code"
+                    colorColumn="impact"
+                    highlightValue={correlationInsight.primaryFactor?.type === 'returnCode' ? correlationInsight.primaryFactor.name : undefined}
+                    columns={[
+                      {
+                        key: "code",
+                        title: "Return Code",
+                        tooltip: "Transaction return code"
+                      },
+                      {
+                        key: "cnt",
+                        title: "Transaction Volume",
+                        tooltip: "Transaction count: baseline → current (Δ = change)",
+                        render: (v, row) => {
+                          const current = Number(v);
+                          const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                          const delta = current - previous;
+                          return `${previous.toLocaleString()} → ${current.toLocaleString()} (Δ ${delta >= 0 ? '+' : ''}${delta.toLocaleString()})`;
+                        }
+                      },
+                      {
+                        key: "succ",
+                        title: successRateColumnConfig.title,
+                        tooltip: successRateColumnConfig.tooltip,
+                        render: (v, row) => {
+                          const currentRate = Number(v);
+                          const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
+                          const decline = Math.max(0, previousRate - currentRate);
+                          return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
+                        }
+                      },
+                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                    ]}
+                    data={returnCodes}
+                  />
                 </div>
-                <Table
-                  keyField="type"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'session-table-full' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
-                  ]}
-                  data={transType}
-                />
-              </div>
 
-              {/* Server IP Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <Server className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                {/* Server IP Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                      <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
+                    </div>
+                    <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
+                  <Table
+                    keyField="ip"
+                    colorColumn="impact"
+                    highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
+                    columns={[
+                      {
+                        key: "ip",
+                        title: "Server IP",
+                        tooltip: "Server IP Address",
+                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                      },
+                      {
+                        key: "cnt",
+                        title: "Transaction Volume",
+                        tooltip: "Transaction count: baseline → current (Δ = change)",
+                        render: (v, row) => {
+                          const current = Number(v);
+                          const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                          const delta = current - previous;
+                          return `${previous.toLocaleString()} → ${current.toLocaleString()} (Δ ${delta >= 0 ? '+' : ''}${delta.toLocaleString()})`;
+                        }
+                      },
+                      {
+                        key: "succ",
+                        title: successRateColumnConfig.title,
+                        tooltip: successRateColumnConfig.tooltip,
+                        render: (v, row) => {
+                          const currentRate = Number(v);
+                          const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
+                          const decline = Math.max(0, previousRate - currentRate);
+                          return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
+                        }
+                      },
+                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                    ]}
+                    data={servers}
+                  />
                 </div>
-                <Table
-                  keyField="ip"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    {
-                      key: "ip",
-                      title: "Server",
-                      tooltip: "Server IP Address",
-                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
-                    },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
-                  ]}
-                  data={servers}
-                />
-              </div>
 
-              {/* Client IP Table */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <div className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                    <Globe className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                {/* Client IP Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
+                      <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
+                    </div>
+                    <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
                   </div>
-                  <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
+                  <Table
+                    keyField="ip"
+                    colorColumn="impact"
+                    highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
+                    columns={[
+                      {
+                        key: "ip",
+                        title: "Client IP",
+                        tooltip: "Client IP Address",
+                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                      },
+                      {
+                        key: "cnt",
+                        title: "Transaction Volume",
+                        tooltip: "Transaction count: baseline → current (Δ = change)",
+                        render: (v, row) => {
+                          const current = Number(v);
+                          const previous = row.previousCnt !== undefined ? row.previousCnt : current;
+                          const delta = current - previous;
+                          return `${previous.toLocaleString()} → ${current.toLocaleString()} (Δ ${delta >= 0 ? '+' : ''}${delta.toLocaleString()})`;
+                        }
+                      },
+                      {
+                        key: "succ",
+                        title: successRateColumnConfig.title,
+                        tooltip: successRateColumnConfig.tooltip,
+                        render: (v, row) => {
+                          const currentRate = Number(v);
+                          const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
+                          const decline = Math.max(0, previousRate - currentRate);
+                          return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
+                        }
+                      },
+                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                    ]}
+                    data={clients}
+                  />
                 </div>
-                <Table
-                  keyField="ip"
-                  colorColumn="impact"
-                  highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
-                  columns={[
-                    {
-                      key: "ip",
-                      title: "Client",
-                      tooltip: "Client IP Address",
-                      render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
-                    },
-                    {
-                      key: "cnt",
-                      title: countColumnHeader.title,
-                      tooltip: countColumnHeader.tooltip,
-                      render: (v, row) => {
-                        const current = Number(v);
-                        const previous = row.previousCnt !== undefined ? row.previousCnt : current;
-                        return `${previous} → ${current}`;
-                      }
-                    },
-                    { key: "outlierness", title: "Change (%)", render: (v) => `${currentScenario === 'networkIssue' ? '-' : '+'}${formatNumber(v)}%`, tooltip: "Change Rate: How much higher this value's failure rate is compared to the median within this dimension." },
-                    { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, icon: ArrowDown, tooltip: "Impact Percentage" },
-                  ]}
-                  data={clients}
-                />
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-
-        {/* Network Correlation */}
-        <Card className="flex flex-col">
+          {/* Network Correlation - Takes 1 column on xl screens, full width on smaller screens */}
+          <Card className="flex flex-col xl:col-span-1">
           <SectionHeader
             title="Network Correlation"
             subtitle="Determining if network layer contributed to the alert · Green: No impact · Amber: Has impact"
             right={
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => setActiveChart('tcp')}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all ${
                     activeChart === 'tcp'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${
+                  <span className={`w-1.5 h-1.5 rounded-full ${
                     healthStatus.tcp === 'error'
                       ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
                       : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
@@ -949,13 +1130,13 @@ export default function App(): React.ReactElement {
                 </button>
                 <button
                   onClick={() => setActiveChart('network')}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all ${
                     activeChart === 'network'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${
+                  <span className={`w-1.5 h-1.5 rounded-full ${
                     healthStatus.network === 'error'
                       ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
                       : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
@@ -974,9 +1155,9 @@ export default function App(): React.ReactElement {
             details={scenarioStatus.networkAssessment.details}
           />
 
-          <div className="p-4">
+          <div className="p-3">
             {/* Charts */}
-            <div className="h-[240px]">
+            <div className="h-[220px]">
               {activeChart === 'network' ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={networkHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
@@ -1091,6 +1272,7 @@ export default function App(): React.ReactElement {
             </div>
           </div>
         </Card>
+        </div>
 
         {/* Footer Note */}
         <div className="text-xs text-neutral-500 text-center py-6">Demo view · Modern, minimal & clear · Built with React + Tailwind + Recharts</div>
