@@ -32,6 +32,74 @@ export const placeholderServers: ServerData[] = [
 ];
 
 export const placeholderReturnCodes: ReturnCodeData[] = [
-  { code: "null (No Resp)", cnt: 805, resp: 0.0, time: 0.0, succ: 0.00, impact: 100 },
+  // S2 场景：招商银行渠道响应率下降
+  // 基线: 805 笔交易，99.8% 成功率（803 成功，2 失败）
+  // 故障: 805 笔交易，95.2% 成功率（766 成功，39 失败）
+  // 主要问题：招商银行渠道响应慢，导致部分无响应（resp 从 100% 降到 88.3%）
+
+  // 00: Approved - 成功交易
+  {
+    code: "(00) Approved",
+    cnt: 766,           // 故障时的成功交易
+    previousCnt: 803,   // 基线时的成功交易（805 * 99.8%）
+    resp: 100.0,        // 有响应
+    previousSucc: 100.0, // 基线时 00 也是 100% 成功
+    time: 52000,
+    succ: 100.0,        // 00 代码本身就是成功
+    impact: 0,          // 不贡献失败
+    outlierness: 0
+  },
+
+  // 无响应 - 招商银行渠道无响应（主要问题）
+  {
+    code: "null (No Resp)",
+    cnt: 35,            // 故障时的无响应（响应率下降的主要原因）
+    previousCnt: 0,     // 基线时无此问题
+    resp: 0.0,          // 无响应
+    previousSucc: 0.0,  // 无响应就是失败
+    time: 0,
+    succ: 0.0,          // 无响应是失败
+    impact: 94.6,       // 占新增失败的 94.6% (35/37)
+    outlierness: 85.5
+  },
+
+  // 91: Issuer or switch inoperative - 少量超时
+  {
+    code: "(91) Issuer or switch inoperative",
+    cnt: 1,             // 故障时的超时
+    previousCnt: 1,     // 基线时的少量超时
+    resp: 0.0,          // 超时无响应
+    previousSucc: 0.0,  // 91 代码本身就是失败
+    time: 0,
+    succ: 0.0,          // 91 是失败代码
+    impact: 0,          // 无新增失败
+    outlierness: 0
+  },
+
+  // 96: System malfunction - 少量系统故障
+  {
+    code: "(96) System malfunction",
+    cnt: 1,             // 故障时的系统故障
+    previousCnt: 1,     // 基线时的少量系统故障
+    resp: 0.0,          // 系统故障无响应
+    previousSucc: 0.0,  // 96 代码本身就是失败
+    time: 0,
+    succ: 0.0,          // 96 是失败代码
+    impact: 0,          // 无新增失败
+    outlierness: 0
+  },
+
+  // 05: Do not honor - 少量拒绝
+  {
+    code: "(05) Do not honor",
+    cnt: 2,             // 故障时的拒绝交易
+    previousCnt: 0,     // 基线时无此错误
+    resp: 100.0,        // 有响应但拒绝
+    previousSucc: 0.0,  // 05 代码本身就是失败
+    time: 58000,
+    succ: 0.0,          // 05 是失败代码
+    impact: 5.4,        // 占新增失败的 5.4% (2/37)
+    outlierness: 12.5
+  },
 ];
 

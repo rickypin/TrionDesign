@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Activity, Server, Globe, BarChart3, Zap, Layers, Sun, Moon, Monitor, ArrowDown, TrendingDown, Clock, CheckCircle, Gauge, Target, Info, Timer } from "lucide-react";
+import { AlertTriangle, Activity, Server, Globe, BarChart3, Sun, Moon, Monitor, Clock, Timer } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -11,18 +11,17 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Legend,
-  AreaChart,
   Area,
   ReferenceLine,
   ReferenceArea,
   ReferenceDot,
 } from "recharts";
-import { Card, SectionHeader, KPI, Table, CorrelationInsight } from "@/components";
+import { Card, Table, NetworkCorrelationSidebar } from "@/components";
 import { useTheme } from "@/hooks/useTheme";
 import { useAlertData } from "@/hooks/useAlertData";
 import { switchScenario, getCurrentScenario } from "@/api/alertApi";
 import { formatNumber, formatDate } from "@/utils/format";
-import { analyzeCorrelation } from "@/utils/correlationAnalysis";
+import { findOutliers } from "@/utils/tableColoring";
 import type { ScenarioId } from "@/types/alert";
 
 // IP Tooltip Component
@@ -30,8 +29,16 @@ const IPTooltip: React.FC<{ ip: string; children: React.ReactNode }> = ({ ip, ch
   const [showTooltip, setShowTooltip] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const hideTimer = useRef<number | null>(null);
-  const { resolvedTheme } = useTheme();
   const spanRef = useRef<HTMLSpanElement>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) {
+        window.clearTimeout(hideTimer.current);
+      }
+    };
+  }, []);
 
   const openTooltip = () => {
     if (spanRef.current) {
@@ -119,6 +126,12 @@ const CHART_COLORS = {
   amber: '#f59e0b',     // 琥珀色 - 温暖、醒目
   pink: '#ec4899',      // 品红 - 活力、鲜明
   indigo: '#6366f1',    // 靛青 - 深邃、稳重
+  // Network metrics colors
+  packetLoss: '#ef4444',        // 红色 - Packet Loss
+  retransmission: '#f97316',    // 橙色 - Retransmission
+  duplicateAck: '#eab308',      // 黄色 - Duplicate ACK
+  tcpSetupSuccess: '#60a5fa',   // 亮蓝色 - TCP Setup Success (更亮，更易见)
+  tcpRst: '#fb923c',            // 亮橙色 - TCP RST (更亮，更易见)
 } as const;
 
 // Custom label component for reference lines with icons
@@ -127,8 +140,6 @@ const CustomReferenceLabel = ({
   value,
   icon,
   fill,
-  isDark,
-  yAxisDomain = [50, 100],
   metricValue,
   metricUnit
 }: {
@@ -136,8 +147,6 @@ const CustomReferenceLabel = ({
   value: string;
   icon: 'line' | 'triangle';
   fill: string;
-  isDark: boolean;
-  yAxisDomain?: [number, number];
   metricValue?: number;
   metricUnit?: string;
 }) => {
@@ -209,12 +218,10 @@ const CustomReferenceLabel = ({
 
 export default function App(): React.ReactElement {
   const [currentScenario, setCurrentScenario] = useState<ScenarioId>(getCurrentScenario());
-  const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
-    // S1 (app-gc) defaults to 'network' (Performance)
-    // S2 (session-table-full) and S3 (pmtud-black-hole) default to 'tcp' (Availability)
-    currentScenario === 'app-gc' ? 'network' : 'tcp'
-  );
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [isNetworkExpanded, setIsNetworkExpanded] = useState(false);
+  const [switchingScenario, setSwitchingScenario] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   // Fetch all alert data from API
   const {
@@ -257,69 +264,86 @@ export default function App(): React.ReactElement {
     return rawResponseRate;
   }, [rawResponseRate, alertMetadata]);
 
-  // Analyze correlation data for insights and override with scenario status primary factor if available
-  const correlationInsight = React.useMemo(() => {
-    const calculatedInsight = analyzeCorrelation(transType, servers, clients);
-    const primaryFactor = scenarioStatus?.businessInfraBreakdown.primaryFactor;
-
-    if (!primaryFactor) {
-      return calculatedInsight;
+  // Find most impacted items using table coloring logic (outlier detection)
+  const mostImpactedItems = React.useMemo(() => {
+    interface MostImpactedItem {
+      type: 'transType' | 'returnCode' | 'server' | 'client' | 'channel';
+      name: string;
+      impact: number;
     }
 
-    // Map dimension ID to type
-    const dimensionTypeMap: Record<string, 'transType' | 'server' | 'client' | 'channel'> = {
-      'transType': 'transType',
-      'serverIp': 'server',
-      'clientIp': 'client',
-      'channel': 'channel'
-    };
+    const items: MostImpactedItem[] = [];
 
-    const factorType = dimensionTypeMap[primaryFactor.dimension] || 'transType';
+    // Find outliers in each dimension
+    const transTypeOutliers = findOutliers(transType, 'impact');
+    transTypeOutliers.forEach(item => {
+      items.push({ type: 'transType', name: item.type, impact: item.impact });
+    });
 
-    // Find impact value from the appropriate data source
-    let impact = 0;
-    if (factorType === 'transType') {
-      const item = transType.find(t => t.type === primaryFactor.value);
-      impact = item?.impact || 0;
-    } else if (factorType === 'server') {
-      const item = servers.find(s => s.ip === primaryFactor.value);
-      impact = item?.impact || 0;
-    } else if (factorType === 'client') {
-      const item = clients.find(c => c.ip === primaryFactor.value);
-      impact = item?.impact || 0;
-    } else if (factorType === 'channel') {
-      const item = channels.find(ch => ch.channel === primaryFactor.value);
-      impact = item?.impact || 0;
+    const returnCodeOutliers = findOutliers(returnCodes, 'impact');
+    returnCodeOutliers.forEach(item => {
+      items.push({ type: 'returnCode', name: String(item.code), impact: item.impact });
+    });
+
+    const serverOutliers = findOutliers(servers, 'impact');
+    serverOutliers.forEach(item => {
+      items.push({ type: 'server', name: item.ip, impact: item.impact });
+    });
+
+    const clientOutliers = findOutliers(clients, 'impact');
+    clientOutliers.forEach(item => {
+      items.push({ type: 'client', name: item.ip, impact: item.impact });
+    });
+
+    const channelOutliers = findOutliers(channels, 'impact');
+    channelOutliers.forEach(item => {
+      items.push({ type: 'channel', name: item.channel, impact: item.impact });
+    });
+
+    // Sort by impact descending
+    return items.sort((a, b) => b.impact - a.impact);
+  }, [transType, returnCodes, servers, clients, channels]);
+
+
+
+  // Handle scenario switch with proper error handling and race condition prevention
+  const handleScenarioSwitch = React.useCallback(async (scenarioId: ScenarioId) => {
+    // Prevent switching if already switching or if it's the same scenario
+    if (switchingScenario || scenarioId === currentScenario) {
+      return;
     }
 
-    return {
-      ...calculatedInsight,
-      primaryFactor: {
-        type: factorType,
-        name: primaryFactor.value,
-        impact
-      }
-    };
-  }, [scenarioStatus, transType, servers, clients, channels]);
+    const previousScenario = currentScenario;
 
-  // Update activeChart when scenario changes
-  useEffect(() => {
-    // S1 (app-gc) defaults to 'network' (Performance)
-    // S2 (session-table-full) and S3 (pmtud-black-hole) default to 'tcp' (Availability)
-    setActiveChart(currentScenario === 'app-gc' ? 'network' : 'tcp');
-  }, [currentScenario]);
-
-  // Handle scenario switch
-  const handleScenarioSwitch = async (scenarioId: ScenarioId) => {
     try {
+      setSwitchingScenario(true);
+      setSwitchError(null);
+
+      // First, switch the scenario in the backend
       await switchScenario(scenarioId);
+
+      // Only update UI state after successful backend switch
       setCurrentScenario(scenarioId);
+      setIsNetworkExpanded(false);
+
       // Refresh data after scenario switch
       await refresh();
     } catch (err) {
       console.error('Failed to switch scenario:', err);
+
+      // Rollback to previous scenario on error
+      setCurrentScenario(previousScenario);
+
+      // Set error message for user feedback
+      const errorMessage = err instanceof Error ? err.message : 'Failed to switch scenario';
+      setSwitchError(errorMessage);
+
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setSwitchError(null), 5000);
+    } finally {
+      setSwitchingScenario(false);
     }
-  };
+  }, [currentScenario, switchingScenario, refresh]);
 
   // Show loading state
   if (loading) {
@@ -341,33 +365,12 @@ export default function App(): React.ReactElement {
     );
   }
 
-  // Use scenario status from API instead of calculating
-  const healthStatus = {
-    network: scenarioStatus.networkAssessment.details.performance,
-    tcp: scenarioStatus.networkAssessment.details.availability
-  };
-
-  // Dynamic column header based on metric type
-  const getCountColumnHeader = () => {
-    switch (alertMetadata.metricType) {
-      case 'transactionCount':
-        return { title: 'Trans CNT', tooltip: 'Transaction Count' };
-      case 'responseRate':
-      case 'avgResponseTime':
-      case 'successRate':
-      default:
-        return { title: 'Timeouts', tooltip: 'Timed-Out Transactions' };
-    }
-  };
-
-  const countColumnHeader = getCountColumnHeader();
-
   // Dynamic chart configuration based on metric type
   const getChartConfig = () => {
     switch (alertMetadata.metricType) {
       case 'transactionCount':
         return {
-          yAxisDomain: [0, 1000],
+          yAxisDomain: [0, 1000] as [number, number],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}/m` : v),
           lineName: 'Transaction Count',
@@ -376,7 +379,7 @@ export default function App(): React.ReactElement {
         // S3 scenario (pmtud-black-hole) uses 70-100 range for better visualization
         const yAxisMinResponse = currentScenario === 'pmtud-black-hole' ? 70 : 50;
         return {
-          yAxisDomain: [yAxisMinResponse, 100],
+          yAxisDomain: [yAxisMinResponse, 100] as [number, number],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
           lineName: 'Transaction Response Rate',
@@ -384,21 +387,21 @@ export default function App(): React.ReactElement {
       case 'successRate':
         const yAxisMinSuccess = currentScenario === 'pmtud-black-hole' ? 70 : 50;
         return {
-          yAxisDomain: [yAxisMinSuccess, 100],
+          yAxisDomain: [yAxisMinSuccess, 100] as [number, number],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
           lineName: 'Transaction Success Rate',
         };
       case 'avgResponseTime':
         return {
-          yAxisDomain: [0, 200],
+          yAxisDomain: [0, 200] as [number, number],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}ms`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}ms` : v),
           lineName: 'Average Response Time',
         };
       default:
         return {
-          yAxisDomain: [50, 100],
+          yAxisDomain: [50, 100] as [number, number],
           yAxisTickFormatter: (v: number) => `${formatNumber(v)}%`,
           tooltipFormatter: (v: number | string) => (typeof v === "number" ? `${formatNumber(v)}%` : v),
           lineName: 'Transaction Response Rate',
@@ -428,7 +431,7 @@ export default function App(): React.ReactElement {
   const successRateColumnConfig = getSuccessRateColumnConfig();
 
   // Get reference area color based on network assessment status
-  const getReferenceAreaColor = (chartType: 'network' | 'tcp') => {
+  const getReferenceAreaColor = (chartType: string) => {
     if (chartType === 'network') {
       // Performance chart
       return scenarioStatus.networkAssessment.details.performance === 'error' ? '#f59e0b' : '#16a34a';
@@ -438,7 +441,7 @@ export default function App(): React.ReactElement {
     }
   };
 
-  const getReferenceLineColor = (chartType: 'network' | 'tcp') => {
+  const getReferenceLineColor = (chartType: string) => {
     const isError = chartType === 'network'
       ? scenarioStatus.networkAssessment.details.performance === 'error'
       : scenarioStatus.networkAssessment.details.availability === 'error';
@@ -460,6 +463,16 @@ export default function App(): React.ReactElement {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-neutral-800/80 border-b border-neutral-200/70 dark:border-neutral-600/50">
+        {/* Error Banner */}
+        {switchError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-4 py-2">
+            <div className="flex items-center gap-2 text-sm text-red-800 dark:text-red-200">
+              <AlertTriangle className="h-4 w-4" />
+              <span>{switchError}</span>
+            </div>
+          </div>
+        )}
+
         <div className="w-full px-4 py-3">
           <div className="flex items-center justify-between">
             <motion.div
@@ -481,11 +494,12 @@ export default function App(): React.ReactElement {
               <div className="flex items-center gap-2 mr-2">
                 <button
                   onClick={() => handleScenarioSwitch('app-gc')}
+                  disabled={switchingScenario}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                     currentScenario === 'app-gc'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                  }`}
+                  } ${switchingScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                   title="S1: App GC Scenario"
                 >
                   <span className={currentScenario === 'app-gc' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
@@ -494,11 +508,12 @@ export default function App(): React.ReactElement {
                 </button>
                 <button
                   onClick={() => handleScenarioSwitch('session-table-full')}
+                  disabled={switchingScenario}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                     currentScenario === 'session-table-full'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                  }`}
+                  } ${switchingScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                   title="S2: Session Table Full Scenario"
                 >
                   <span className={currentScenario === 'session-table-full' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
@@ -507,11 +522,12 @@ export default function App(): React.ReactElement {
                 </button>
                 <button
                   onClick={() => handleScenarioSwitch('pmtud-black-hole')}
+                  disabled={switchingScenario}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
                     currentScenario === 'pmtud-black-hole'
                       ? 'bg-neutral-200 dark:bg-neutral-600 font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                  }`}
+                  } ${switchingScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                   title="S3: PMTUD Black Hole Scenario"
                 >
                   <span className={currentScenario === 'pmtud-black-hole' ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}>
@@ -718,8 +734,6 @@ export default function App(): React.ReactElement {
                       value="Triggered"
                       icon="line"
                       fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
-                      isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={chartConfig.yAxisDomain}
                     />}
                   />
                   <ReferenceLine
@@ -729,8 +743,6 @@ export default function App(): React.ReactElement {
                       value="Lowest Point"
                       icon="triangle"
                       fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
-                      isDark={resolvedTheme === 'dark'}
-                      yAxisDomain={chartConfig.yAxisDomain}
                       metricValue={alertMetadata.lowestPoint.value}
                       metricUnit={alertMetadata.lowestPoint.unit}
                     />}
@@ -756,8 +768,6 @@ export default function App(): React.ReactElement {
                         value="Recovered"
                         icon="line"
                         fill={resolvedTheme === 'dark' ? '#fca5a5' : '#dc2626'}
-                        isDark={resolvedTheme === 'dark'}
-                        yAxisDomain={chartConfig.yAxisDomain}
                       />}
                     />
                   )}
@@ -767,10 +777,11 @@ export default function App(): React.ReactElement {
           </div>
         </Card>
 
-        {/* Responsive Layout: Business Impact (2/3) + Network Correlation (1/3) */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4">
-          {/* Business Impact - Takes 2 columns on xl screens, full width on smaller screens */}
-          <Card className="xl:col-span-2">
+        {/* Responsive Layout: Business Impact (flex) + Network Correlation Sidebar (280px) */}
+        <div className="flex flex-col xl:flex-row gap-3 sm:gap-4">
+          {/* Business Impact - Takes remaining space on xl screens, full width on smaller screens */}
+          {!isNetworkExpanded && (
+            <Card className="flex-1 min-w-0">
             {/* Section Header */}
             <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
               <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
@@ -780,96 +791,97 @@ export default function App(): React.ReactElement {
 
             {/* Summary Header - Most Impacted and Affected in one line */}
             <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
-              {(() => {
-                // Find top factor from correlation insight
-                const topFactor = correlationInsight.primaryFactor;
-
-                if (!topFactor) {
-                  return (
-                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                      Analyzing dimensional impact...
-                    </div>
-                  );
-                }
-
-                // Get dimension type label
-                const getDimensionLabel = (type: string) => {
-                  switch (type) {
-                    case 'transType': return 'Trans Type';
-                    case 'server': return 'Server IP';
-                    case 'client': return 'Client IP';
-                    case 'channel': return 'Channel';
-                    default: return 'Dimension';
-                  }
-                };
-
-                return (
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Most Impacted */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Most Impacted - Show all outlier items */}
+                {mostImpactedItems.length > 0 && (
+                  <>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
                         Most Impacted:
                       </span>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                          {getDimensionLabel(topFactor.type)}
-                        </span>
-                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                          {topFactor.name}
-                        </span>
+                      <div className="flex flex-wrap gap-2">
+                        {mostImpactedItems.map((item, index) => (
+                          <div key={index} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-300 dark:bg-amber-300">
+                            <span className="text-xs text-neutral-900 dark:text-neutral-900">
+                              {(() => {
+                                switch (item.type) {
+                                  case 'transType': return 'Trans Type';
+                                  case 'returnCode': return 'Return Code';
+                                  case 'server': return 'Server IP';
+                                  case 'client': return 'Client IP';
+                                  case 'channel': return 'Channel';
+                                  default: return 'Dimension';
+                                }
+                              })()}
+                            </span>
+                            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-900">
+                              {item.name}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
                     {/* Separator */}
                     <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600" />
+                  </>
+                )}
 
-                    {/* Affected */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Affected:</span>
+                {/* Affected - Always show regardless of primaryFactor */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Affected:</span>
 
-                      {/* Trans Type Count */}
-                      {transType.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                          <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                            {transType.length} Trans Type{transType.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Server IP Count */}
-                      {servers.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                          <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                            {servers.length} Server IP{servers.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Client IP Count */}
-                      {clients.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                          <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                            {clients.length} Client IP{clients.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Channel Count - Only show if channel dimension is enabled */}
-                      {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                          <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                            {channels.length} Channel{channels.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      )}
+                  {/* Trans Type Count */}
+                  {transType.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                      <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                        {transType.length} Trans Type{transType.length > 1 ? 's' : ''}
+                      </span>
                     </div>
-                  </div>
-                );
-              })()}
+                  )}
+
+                  {/* Return Code Count */}
+                  {returnCodes.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                      <Activity className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                        {returnCodes.length} Return Code{returnCodes.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Channel Count */}
+                  {channels.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                      <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                        {channels.length} Channel{channels.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Server IP Count */}
+                  {servers.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                      <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                        {servers.length} Server IP{servers.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Client IP Count */}
+                  {clients.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
+                      <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                        {clients.length} Client IP{clients.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Analysis Tables - Responsive Layout */}
@@ -887,13 +899,15 @@ export default function App(): React.ReactElement {
                     <Table
                       keyField="channel"
                       colorColumn="impact"
-                      highlightValue={correlationInsight.primaryFactor?.type === 'channel' ? correlationInsight.primaryFactor.name : undefined}
+                      defaultSortColumn="impact"
+                      defaultSortDirection="desc"
                       columns={[
-                        { key: "channel", title: "Channel", tooltip: "Channel Name" },
+                        { key: "channel", title: "Channel", tooltip: "Channel Name", sortable: false },
                         {
                           key: "cnt",
                           title: "Transaction Volume",
                           tooltip: "Transaction count: baseline → current (Δ = change)",
+                          sortValue: (row) => Number(row.cnt),
                           render: (v, row) => {
                             const current = Number(v);
                             const previous = row.previousCnt !== undefined ? row.previousCnt : current;
@@ -905,6 +919,7 @@ export default function App(): React.ReactElement {
                           key: "succ",
                           title: successRateColumnConfig.title,
                           tooltip: successRateColumnConfig.tooltip,
+                          sortValue: (row) => Number(row.succ),
                           render: (v, row) => {
                             const currentRate = Number(v);
                             const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
@@ -912,7 +927,13 @@ export default function App(): React.ReactElement {
                             return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
                           }
                         },
-                        { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                        {
+                          key: "impact",
+                          title: "Impact (%)",
+                          render: (v) => `${formatNumber(v)}%`,
+                          tooltip: "Contribution to total new failures in this incident",
+                          sortValue: (row) => Number(row.impact)
+                        },
                       ]}
                       data={channels}
                     />
@@ -930,13 +951,15 @@ export default function App(): React.ReactElement {
                   <Table
                     keyField="type"
                     colorColumn="impact"
-                    highlightValue={correlationInsight.primaryFactor?.type === 'transType' ? correlationInsight.primaryFactor.name : undefined}
+                    defaultSortColumn="impact"
+                    defaultSortDirection="desc"
                     columns={[
-                      { key: "type", title: "Trans Type", tooltip: "Transaction Type" },
+                      { key: "type", title: "Trans Type", tooltip: "Transaction Type", sortable: false },
                       {
                         key: "cnt",
                         title: "Transaction Volume",
                         tooltip: "Transaction count: baseline → current (Δ = change)",
+                        sortValue: (row) => Number(row.cnt),
                         render: (v, row) => {
                           const current = Number(v);
                           const previous = row.previousCnt !== undefined ? row.previousCnt : current;
@@ -948,6 +971,7 @@ export default function App(): React.ReactElement {
                         key: "succ",
                         title: successRateColumnConfig.title,
                         tooltip: successRateColumnConfig.tooltip,
+                        sortValue: (row) => Number(row.succ),
                         render: (v, row) => {
                           const currentRate = Number(v);
                           const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
@@ -955,7 +979,13 @@ export default function App(): React.ReactElement {
                           return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
                         }
                       },
-                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                      {
+                        key: "impact",
+                        title: "Impact (%)",
+                        render: (v) => `${formatNumber(v)}%`,
+                        tooltip: "Contribution to total new failures in this incident",
+                        sortValue: (row) => Number(row.impact)
+                      },
                     ]}
                     data={transType}
                   />
@@ -972,17 +1002,20 @@ export default function App(): React.ReactElement {
                   <Table
                     keyField="code"
                     colorColumn="impact"
-                    highlightValue={correlationInsight.primaryFactor?.type === 'returnCode' ? correlationInsight.primaryFactor.name : undefined}
+                    defaultSortColumn="impact"
+                    defaultSortDirection="desc"
                     columns={[
                       {
                         key: "code",
                         title: "Return Code",
-                        tooltip: "Transaction return code"
+                        tooltip: "Transaction return code",
+                        sortable: false
                       },
                       {
                         key: "cnt",
                         title: "Transaction Volume",
                         tooltip: "Transaction count: baseline → current (Δ = change)",
+                        sortValue: (row) => Number(row.cnt),
                         render: (v, row) => {
                           const current = Number(v);
                           const previous = row.previousCnt !== undefined ? row.previousCnt : current;
@@ -994,6 +1027,7 @@ export default function App(): React.ReactElement {
                         key: "succ",
                         title: successRateColumnConfig.title,
                         tooltip: successRateColumnConfig.tooltip,
+                        sortValue: (row) => Number(row.succ),
                         render: (v, row) => {
                           const currentRate = Number(v);
                           const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
@@ -1001,7 +1035,13 @@ export default function App(): React.ReactElement {
                           return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
                         }
                       },
-                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                      {
+                        key: "impact",
+                        title: "Impact (%)",
+                        render: (v) => `${formatNumber(v)}%`,
+                        tooltip: "Contribution to total new failures in this incident",
+                        sortValue: (row) => Number(row.impact)
+                      },
                     ]}
                     data={returnCodes}
                   />
@@ -1018,18 +1058,21 @@ export default function App(): React.ReactElement {
                   <Table
                     keyField="ip"
                     colorColumn="impact"
-                    highlightValue={correlationInsight.primaryFactor?.type === 'server' ? correlationInsight.primaryFactor.name : undefined}
+                    defaultSortColumn="impact"
+                    defaultSortDirection="desc"
                     columns={[
                       {
                         key: "ip",
                         title: "Server IP",
                         tooltip: "Server IP Address",
-                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>,
+                        sortable: false
                       },
                       {
                         key: "cnt",
                         title: "Transaction Volume",
                         tooltip: "Transaction count: baseline → current (Δ = change)",
+                        sortValue: (row) => Number(row.cnt),
                         render: (v, row) => {
                           const current = Number(v);
                           const previous = row.previousCnt !== undefined ? row.previousCnt : current;
@@ -1041,6 +1084,7 @@ export default function App(): React.ReactElement {
                         key: "succ",
                         title: successRateColumnConfig.title,
                         tooltip: successRateColumnConfig.tooltip,
+                        sortValue: (row) => Number(row.succ),
                         render: (v, row) => {
                           const currentRate = Number(v);
                           const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
@@ -1048,7 +1092,13 @@ export default function App(): React.ReactElement {
                           return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
                         }
                       },
-                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                      {
+                        key: "impact",
+                        title: "Impact (%)",
+                        render: (v) => `${formatNumber(v)}%`,
+                        tooltip: "Contribution to total new failures in this incident",
+                        sortValue: (row) => Number(row.impact)
+                      },
                     ]}
                     data={servers}
                   />
@@ -1065,18 +1115,21 @@ export default function App(): React.ReactElement {
                   <Table
                     keyField="ip"
                     colorColumn="impact"
-                    highlightValue={correlationInsight.primaryFactor?.type === 'client' ? correlationInsight.primaryFactor.name : undefined}
+                    defaultSortColumn="impact"
+                    defaultSortDirection="desc"
                     columns={[
                       {
                         key: "ip",
                         title: "Client IP",
                         tooltip: "Client IP Address",
-                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>
+                        render: (v) => <IPTooltip ip={v}>{v}</IPTooltip>,
+                        sortable: false
                       },
                       {
                         key: "cnt",
                         title: "Transaction Volume",
                         tooltip: "Transaction count: baseline → current (Δ = change)",
+                        sortValue: (row) => Number(row.cnt),
                         render: (v, row) => {
                           const current = Number(v);
                           const previous = row.previousCnt !== undefined ? row.previousCnt : current;
@@ -1088,6 +1141,7 @@ export default function App(): React.ReactElement {
                         key: "succ",
                         title: successRateColumnConfig.title,
                         tooltip: successRateColumnConfig.tooltip,
+                        sortValue: (row) => Number(row.succ),
                         render: (v, row) => {
                           const currentRate = Number(v);
                           const previousRate = row.previousSucc !== undefined ? row.previousSucc : currentRate;
@@ -1095,7 +1149,13 @@ export default function App(): React.ReactElement {
                           return `${formatNumber(previousRate)}% → ${formatNumber(currentRate)}% (↓${formatNumber(decline)}pp)`;
                         }
                       },
-                      { key: "impact", title: "Impact (%)", render: (v) => `${formatNumber(v)}%`, tooltip: "Contribution to total new failures in this incident" },
+                      {
+                        key: "impact",
+                        title: "Impact (%)",
+                        render: (v) => `${formatNumber(v)}%`,
+                        tooltip: "Contribution to total new failures in this incident",
+                        sortValue: (row) => Number(row.impact)
+                      },
                     ]}
                     data={clients}
                   />
@@ -1103,217 +1163,25 @@ export default function App(): React.ReactElement {
               </div>
             </div>
           </Card>
+          )}
 
-          {/* Network Correlation - Takes 1 column on xl screens, full width on smaller screens */}
-          <Card className="flex flex-col xl:col-span-1">
-            {/* Section Header - Aligned with Business Impact */}
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
-              <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                Network Correlation
-              </h3>
-            </div>
-
-            {/* Assessment and Metrics in one row */}
-            <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Assessment */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-                    Assessment:
-                  </span>
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md ${
-                    scenarioStatus.networkAssessment.hasImpact
-                      ? 'bg-amber-100 dark:bg-amber-800/35'
-                      : 'bg-green-100 dark:bg-green-900/25'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      scenarioStatus.networkAssessment.hasImpact
-                        ? 'bg-amber-500 ring-2 ring-amber-200 dark:ring-amber-400/60'
-                        : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
-                    }`} />
-                    <span className={`text-sm font-semibold ${
-                      scenarioStatus.networkAssessment.hasImpact
-                        ? 'text-amber-700 dark:text-amber-300'
-                        : 'text-green-700 dark:text-green-300'
-                    }`}>
-                      {scenarioStatus.networkAssessment.hasImpact ? 'Network Impact' : 'No Impact'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Separator */}
-                <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600" />
-
-                {/* Metrics with Chart Toggle */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-                    Metrics:
-                  </span>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => setActiveChart('tcp')}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
-                        activeChart === 'tcp'
-                          ? 'bg-neutral-200 dark:bg-neutral-600'
-                          : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        healthStatus.tcp === 'error'
-                          ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
-                          : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
-                      }`} />
-                      <span className={`text-sm ${
-                        activeChart === 'tcp'
-                          ? 'text-neutral-900 dark:text-neutral-100 font-medium'
-                          : 'text-neutral-900 dark:text-neutral-100'
-                      }`}>
-                        Availability
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setActiveChart('network')}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
-                        activeChart === 'network'
-                          ? 'bg-neutral-200 dark:bg-neutral-600'
-                          : 'bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-150 dark:hover:bg-neutral-650'
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        healthStatus.network === 'error'
-                          ? 'bg-amber-300 dark:bg-amber-400 ring-2 ring-amber-200 dark:ring-amber-400/60'
-                          : 'bg-green-500 ring-2 ring-green-200 dark:ring-green-800'
-                      }`} />
-                      <span className={`text-sm ${
-                        activeChart === 'network'
-                          ? 'text-neutral-900 dark:text-neutral-100 font-medium'
-                          : 'text-neutral-900 dark:text-neutral-100'
-                      }`}>
-                        Performance
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          <div className="p-3">
-            {/* Charts */}
-            <div className="h-[220px]">
-              {activeChart === 'network' ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={networkHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                    <defs>
-                      <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopOpacity={0.35} />
-                        <stop offset="100%" stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                    />
-                    <XAxis dataKey="t" />
-                    <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                    <Tooltip
-                      formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)}
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                        borderRadius: '8px',
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
-                      }}
-                      labelStyle={{
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
-                      }}
-                    />
-                    <Legend />
-                    <ReferenceArea
-                      x1={alertMetadata.duration.start}
-                      x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}
-                      fill={getReferenceAreaColor('network')}
-                      fillOpacity={0.1}
-                    />
-                    <Area type="monotone" dataKey="loss" name="Packet Loss" stroke={CHART_COLORS.purple} fill="url(#g1)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="retrans" name="Retransmission" stroke={CHART_COLORS.cyan} fillOpacity={0.2} strokeWidth={2} />
-                    <Area type="monotone" dataKey="dupAck" name="Duplicate ACK" stroke={CHART_COLORS.amber} fillOpacity={0.2} strokeWidth={2} />
-                    <ReferenceLine
-                      x={alertMetadata.duration.start}
-                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
-                      strokeWidth={2}
-                      strokeOpacity={0.7}
-                    />
-                    {alertMetadata.duration.end && (
-                      <ReferenceLine
-                        x={alertMetadata.duration.end}
-                        stroke={resolvedTheme === 'dark' ? getReferenceLineColor('network').dark : getReferenceLineColor('network').light}
-                        strokeWidth={2}
-                        strokeOpacity={0.7}
-                      />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={tcpHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                    />
-                    <XAxis dataKey="t" />
-                    <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} />
-                    <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} />
-                    <Tooltip
-                      formatter={(v, name) => {
-                        if (typeof v === "number") {
-                          return formatNumber(v);
-                        }
-                        return v;
-                      }}
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                        borderRadius: '8px',
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
-                      }}
-                      labelStyle={{
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
-                      }}
-                    />
-                    <Legend />
-                    <ReferenceArea
-                      yAxisId="left"
-                      x1={alertMetadata.duration.start}
-                      x2={alertMetadata.duration.end || (tcpHealth.length > 0 ? tcpHealth[tcpHealth.length - 1].t : alertMetadata.duration.start)}
-                      fill={getReferenceAreaColor('tcp')}
-                      fillOpacity={0.1}
-                    />
-                    <ReferenceLine
-                      yAxisId="left"
-                      x={alertMetadata.duration.start}
-                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
-                      strokeWidth={2}
-                      strokeOpacity={0.7}
-                    />
-                    {alertMetadata.duration.end && (
-                      <ReferenceLine
-                        yAxisId="left"
-                        x={alertMetadata.duration.end}
-                        stroke={resolvedTheme === 'dark' ? getReferenceLineColor('tcp').dark : getReferenceLineColor('tcp').light}
-                        strokeWidth={2}
-                        strokeOpacity={0.7}
-                      />
-                    )}
-                    <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success %" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
-                    <Line yAxisId="right" type="monotone" dataKey="rst" name="TCP RST" stroke={CHART_COLORS.pink} dot={false} strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-        </Card>
+          {/* Network Correlation - Sidebar Version (Fixed 280px width on xl screens) or Full Width when expanded */}
+          <Card className={isNetworkExpanded ? "flex-1" : "xl:w-[280px] xl:flex-shrink-0"}>
+            {/* Sidebar Network Correlation Component */}
+            <NetworkCorrelationSidebar
+              networkHealth={networkHealth}
+              tcpHealth={tcpHealth}
+              alertMetadata={alertMetadata}
+              hasImpact={scenarioStatus.networkAssessment.hasImpact}
+              details={scenarioStatus.networkAssessment.details}
+              resolvedTheme={resolvedTheme}
+              formatNumber={formatNumber}
+              CHART_COLORS={CHART_COLORS}
+              getReferenceAreaColor={getReferenceAreaColor}
+              getReferenceLineColor={getReferenceLineColor}
+              onExpandChange={setIsNetworkExpanded}
+            />
+          </Card>
         </div>
 
         {/* Footer Note */}

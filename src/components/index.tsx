@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { CardProps, SectionHeaderProps, KPIProps, TableProps } from "@/types";
+import { getRowColorClass, shouldBold as shouldBoldValue } from "@/utils/tableColoring";
 
-export { CorrelationInsight } from "./CorrelationInsight";
 export { NetworkAssessment } from "./NetworkAssessment";
+export { NetworkCorrelationCompact } from "./NetworkCorrelationCompact";
+export { NetworkCorrelationSidebar } from "./NetworkCorrelationSidebar";
 
 export const Card: React.FC<CardProps> = ({ children, className = "" }) => (
   <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5 ${className}`}>
@@ -77,82 +80,92 @@ export const KPI: React.FC<KPIProps> = ({ label, value, trend, icon: Icon }) => 
   </Card>
 );
 
-export const Table = <T extends Record<string, any>>({ columns, data, keyField, colorColumn, highlightValue }: TableProps<T>): React.ReactElement => {
-  // Check if a row is the highlighted primary factor
-  const isHighlighted = (row: T): boolean => {
-    if (!highlightValue) return false;
-    return String(row[keyField]) === highlightValue;
-  };
+export const Table = <T extends Record<string, any>>({
+  columns,
+  data,
+  keyField,
+  colorColumn,
+  defaultSortColumn,
+  defaultSortDirection = 'desc'
+}: TableProps<T>): React.ReactElement => {
+  // State for sorting
+  const [sortColumn, setSortColumn] = useState<keyof T | null>(defaultSortColumn || null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
 
-  // 计算基于impact值的着色强度
-  const getRowColorClass = (value: number, row: T): string => {
+  // Sort data based on current sort state
+  const sortedData = useMemo(() => {
+    if (!sortColumn) return data;
+
+    const column = columns.find(c => c.key === sortColumn);
+    if (!column) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue: number | string;
+      let bValue: number | string;
+
+      // Use custom sortValue function if provided, otherwise use the raw value
+      if (column.sortValue) {
+        aValue = column.sortValue(a);
+        bValue = column.sortValue(b);
+      } else {
+        aValue = a[sortColumn];
+        bValue = b[sortColumn];
+      }
+
+      // Handle numeric comparison
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      // Handle string comparison
+      const aStr = String(aValue);
+      const bStr = String(bValue);
+      const comparison = aStr.localeCompare(bStr);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [data, sortColumn, sortDirection, columns]);
+
+  // Extract all values for outlier detection
+  const allValues = colorColumn
+    ? sortedData.map(row => row[colorColumn]).filter(v => typeof v === 'number') as number[]
+    : [];
+
+  // Get row color class using utility function
+  const getRowColor = (value: number): string => {
     if (!colorColumn || typeof value !== 'number') return '';
+    return getRowColorClass(value, allValues);
+  };
 
-    // If this is the highlighted row (PRIMARY FACTOR), use consistent bright yellow across all scenarios
-    // Bright yellow (amber-300) with black text for high contrast, matching Primary Factor badge style
-    if (isHighlighted(row)) {
-      return 'bg-amber-300 dark:bg-amber-300 text-neutral-900 dark:text-neutral-900 ring-2 ring-amber-400/60 dark:ring-amber-400/60';
-    }
+  // Check if value should be bold using utility function
+  const shouldBold = (value: number): boolean => {
+    if (!colorColumn || typeof value !== 'number') return false;
+    return shouldBoldValue(value, allValues);
+  };
 
-    // 计算在当前数据集中的相对强度（0-1之间）
-    const values = data.map(row => row[colorColumn]).filter(v => typeof v === 'number') as number[];
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+  // Handle column header click for sorting
+  const handleSort = (columnKey: keyof T, sortable?: boolean) => {
+    if (sortable === false) return;
 
-    // 如果所有值相等，不着色
-    if (min === max) {
-      return '';
-    }
-
-    // 计算数据集的差异范围和第二高值
-    const range = max - min;
-    const sortedValues = [...values].sort((a, b) => b - a);
-    const secondMax = sortedValues[1] || 0;
-    const maxToSecondRatio = secondMax > 0 ? max / secondMax : 1;
-
-    // 判断是否为"集中分布"（有明显主导因素）
-    // 条件1: 最高值 > 60% (绝对优势)
-    // 条件2: 最高值是第二高值的 2 倍以上 (相对优势)
-    const isConcentrated = max > 60 || maxToSecondRatio >= 2.0;
-
-    // 如果不是集中分布（均匀分布），所有行不着色
-    // 例如 S2: Trans Type 最高 35%，Server/Client IP 差异 < 4%
-    if (!isConcentrated) {
-      return '';
-    }
-
-    // 集中分布场景（如 S1: Normal Purchase 93.75%）
-    // 只对最高值进行显著标记，其他值不着色
-    const isMaxValue = value === max;
-
-    if (isMaxValue) {
-      // 最高值：适度的琥珀色标记，dark 模式下更微妙
-      return 'bg-amber-100/50 dark:bg-amber-900/12';
+    if (sortColumn === columnKey) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // 其他值：不着色
-      return '';
+      // Set new column and default to descending for numeric columns
+      setSortColumn(columnKey);
+      setSortDirection('desc');
     }
   };
 
-  // 判断是否需要加粗字体
-  const shouldBold = (value: number, row: T): boolean => {
-    // Highlighted row is always bold
-    if (isHighlighted(row)) return true;
+  // Get sort icon for a column
+  const getSortIcon = (columnKey: keyof T, sortable?: boolean) => {
+    if (sortable === false) return null;
 
-    if (!colorColumn || typeof value !== 'number') return false;
-
-    const values = data.map(row => row[colorColumn]).filter(v => typeof v === 'number') as number[];
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    // 如果所有值相等或差异很小，不加粗（除非是高亮行）
-    if (min === max || (max - min) < 8) {
-      return false;
+    if (sortColumn === columnKey) {
+      return sortDirection === 'asc'
+        ? <ArrowUp className="h-3.5 w-3.5" />
+        : <ArrowDown className="h-3.5 w-3.5" />;
     }
-
-    // 如果有差异，只对高影响的行加粗（intensity >= 0.8，提高阈值）
-    const intensity = (value - min) / (max - min);
-    return intensity >= 0.8;
+    return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
   };
 
   return (
@@ -163,26 +176,29 @@ export const Table = <T extends Record<string, any>>({ columns, data, keyField, 
             {columns.map((c, index) => (
               <th
                 key={String(c.key)}
-                className={`px-2 py-2 font-medium whitespace-nowrap bg-neutral-100/80 dark:bg-neutral-700/60 ${index === 0 ? 'text-left' : 'text-right'} cursor-help`}
+                className={`px-2 py-2 font-medium whitespace-nowrap bg-neutral-100/80 dark:bg-neutral-700/60 ${
+                  index === 0 ? 'text-left' : 'text-right'
+                } ${c.sortable !== false ? 'cursor-pointer hover:bg-neutral-200/80 dark:hover:bg-neutral-600/60' : 'cursor-help'} transition-colors`}
                 title={c.tooltip}
+                onClick={() => handleSort(c.key, c.sortable)}
               >
                 <div className={`flex items-center gap-1 ${index === 0 ? '' : 'justify-end'}`}>
                   {c.title}
                   {c.icon && <c.icon className="h-3.5 w-3.5" />}
+                  {getSortIcon(c.key, c.sortable)}
                 </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => {
-            const isBold = colorColumn && shouldBold(row[colorColumn] as number, row);
-            const highlighted = isHighlighted(row);
+          {sortedData.map((row, rowIndex) => {
+            const isBold = colorColumn && shouldBold(row[colorColumn] as number);
             return (
               <tr
                 key={String(row[keyField])}
                 className={`border-t border-neutral-200 dark:border-neutral-700 transition-colors ${
-                  colorColumn ? getRowColorClass(row[colorColumn] as number, row) : ''
+                  colorColumn ? getRowColor(row[colorColumn] as number) : ''
                 } ${isBold ? 'font-semibold' : 'font-normal'}`}
               >
                 {columns.map((c, index) => (

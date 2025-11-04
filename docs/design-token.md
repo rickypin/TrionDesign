@@ -119,13 +119,15 @@
 
 ```
 src/components/
-├── index.tsx              # 基础组件定义和导出
-│   ├── Card               # 卡片容器（基础组件）
-│   ├── SectionHeader      # 区块标题（组合组件）
-│   ├── KPI                # 关键指标卡片（组合组件）
-│   └── Table              # 数据表格（组合组件）
-├── CorrelationInsight.tsx # 关联分析组件（复杂组件）
-└── NetworkAssessment.tsx  # 网络评估组件（复杂组件）
+├── index.tsx                      # 基础组件定义和导出
+│   ├── Card                       # 卡片容器（基础组件）
+│   ├── SectionHeader              # 区块标题（组合组件）
+│   ├── KPI                        # 关键指标卡片（组合组件）
+│   └── Table                      # 数据表格（组合组件）
+├── CorrelationInsight.tsx         # 关联分析组件（复杂组件）
+├── NetworkAssessment.tsx          # 网络评估组件（复杂组件）
+├── NetworkCorrelationCompact.tsx  # 紧凑网络关联组件（复杂组件，已弃用）
+└── NetworkCorrelationSidebar.tsx  # 网络关联侧边栏组件（复杂组件，当前使用）
 ```
 
 ### 核心组件
@@ -249,6 +251,44 @@ src/components/
 
 **用途**：用于展示网络层面的健康评估，包括连接质量、延迟、丢包等指标。
 
+#### 7. NetworkCorrelationSidebar 网络关联侧边栏组件
+```tsx
+<NetworkCorrelationSidebar
+  networkHealth={networkHealthData}
+  tcpHealth={tcpHealthData}
+  alertMetadata={alertMetadata}
+  hasImpact={hasNetworkImpact}
+  details={networkDetails}
+  resolvedTheme={theme}
+  formatNumber={formatNumber}
+  CHART_COLORS={chartColors}
+  getReferenceAreaColor={getReferenceAreaColor}
+  getReferenceLineColor={getReferenceLineColor}
+/>
+```
+
+**特性**：
+- **固定宽度侧边栏**：xl 屏幕上固定 280px 宽度，小屏幕全宽
+- **智能摘要优先**：默认显示网络状态结论（Normal/Impacted）
+- **可展开详情**：点击"View Details"展开完整图表分析
+- **空间高效**：垂直布局优化，最小化横向空间占用
+- **双指标切换**：支持 Availability（TCP）和 Performance（网络）指标切换
+- **状态指示器**：彩色徽章快速识别网络健康状态
+- **响应式动画**：展开/折叠使用平滑过渡动画
+
+**设计理念**：
+- 面向高层管理者，强调"结论优先"而非"数据优先"
+- 侧边栏形式降低视觉权重，突出 Business Impact 的主导地位
+- 默认状态下只显示关键判断（网络是否为问题根因）
+- 保留技术追溯能力，通过展开查看详细指标
+- 符合"Modern, Minimal & Clear"设计原则
+
+**布局策略**：
+- xl 屏幕：Business Impact（弹性宽度）+ Network Correlation（280px 固定宽度）
+- 小屏幕：两者堆叠，各占全宽
+
+**用途**：用于智能告警分析场景，快速判断网络层是否为业务问题的根本原因，同时最大化 Business Impact 的展示空间。
+
 ---
 
 ## 📁 项目结构规范
@@ -323,6 +363,7 @@ TrionDesign/
 **复杂组件（独立文件）**：
 - `CorrelationInsight` - 关联分析洞察（包含复杂逻辑）
 - `NetworkAssessment` - 网络健康评估（包含多层级数据展示）
+- `NetworkCorrelationSidebar` - 网络关联侧边栏（包含状态管理和可展开交互，固定宽度布局）
 
 **原则**：简单的展示型组件集中在 `index.tsx`，包含业务逻辑或超过 50 行的组件独立文件。
 

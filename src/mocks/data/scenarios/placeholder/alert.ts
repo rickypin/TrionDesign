@@ -73,9 +73,10 @@ export const placeholderDimensionConfig: DimensionConfig = {
     {
       id: 'returnCode',
       name: 'Return Code',
-      enabled: false,
+      enabled: true,
       dataEndpoint: '/api/dimensions/return-codes',
-      keyField: 'code'
+      keyField: 'code',
+      colorColumn: 'impact'
     }
   ]
 };

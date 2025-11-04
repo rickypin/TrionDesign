@@ -3,7 +3,7 @@
  * Unified data fetching hook for all alert-related data
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type {
   ResponseRateData,
   NetworkHealthData,
@@ -15,15 +15,15 @@ import type {
   ReturnCodeData
 } from '@/types';
 import type { AlertMetadata, DimensionConfig, ScenarioStatus } from '@/types/alert';
-import { 
-  fetchAlertMetadata, 
-  fetchDimensionConfig, 
-  fetchScenarioStatus 
+import {
+  fetchAlertMetadata,
+  fetchDimensionConfig,
+  fetchScenarioStatus
 } from '@/api/alertApi';
-import { 
-  fetchResponseRate, 
-  fetchNetworkHealth, 
-  fetchTcpHealth 
+import {
+  fetchResponseRate,
+  fetchNetworkHealth,
+  fetchTcpHealth
 } from '@/api/metricsApi';
 import {
   fetchTransactionTypes,
@@ -85,9 +85,9 @@ export function useAlertData(): UseAlertDataReturn {
   const [error, setError] = useState<Error | null>(null);
 
   /**
-   * Fetch all data
+   * Fetch all data - wrapped in useCallback to maintain stable reference
    */
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -137,12 +137,12 @@ export function useAlertData(): UseAlertDataReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty deps - all API functions are stable
 
   // Fetch data on mount
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [fetchAllData]);
 
   return {
     alertMetadata,

@@ -57,6 +57,7 @@ export interface ChannelData {
 export interface ServerData {
   ip: string;
   cnt: number;
+  previousCnt?: number;  // Previous count for baseline comparison
   resp: number;
   previousSucc?: number;  // Previous success rate for baseline comparison
   time: number;
@@ -104,6 +105,8 @@ export interface TableColumn<T> {
   render?: (value: any, row: T) => React.ReactNode;
   icon?: LucideIcon;
   tooltip?: string;
+  sortable?: boolean;
+  sortValue?: (row: T) => number | string;
 }
 
 export interface TableProps<T> {
@@ -111,6 +114,7 @@ export interface TableProps<T> {
   data: T[];
   keyField: keyof T;
   colorColumn?: keyof T;
-  highlightValue?: string; // Value to highlight as primary factor
+  defaultSortColumn?: keyof T;
+  defaultSortDirection?: 'asc' | 'desc';
 }
 
