@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
-import { Minimize2, Maximize2 } from 'lucide-react';
-import { CustomLegendWithInfo } from './CustomLegendWithInfo';
+import { Minimize2, Maximize2, Info } from 'lucide-react';
+import { MetricExplanationPanel } from './MetricExplanationPanel';
+import { calculateAverageMetric } from '@/utils/metricStatusCalculator';
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
+import type { MetricKey } from '@/types/networkMetrics';
 
 interface NetworkCorrelationSidebarProps {
   networkHealth: NetworkHealthData[];
@@ -39,8 +41,19 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
     details.performance === 'error' ? 'network' : 'tcp'
   );
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [activeMetric, setActiveMetric] = useState<MetricKey | undefined>(undefined);
 
   const isHealthy = !hasImpact;
+
+  // Calculate metric values for the panel
+  const metricValues: Record<MetricKey, number | undefined> = {
+    packetLoss: calculateAverageMetric(networkHealth, 'loss', alertMetadata.duration.start, alertMetadata.duration.end),
+    retransmission: calculateAverageMetric(networkHealth, 'retrans', alertMetadata.duration.start, alertMetadata.duration.end),
+    duplicateAck: calculateAverageMetric(networkHealth, 'dupAck', alertMetadata.duration.start, alertMetadata.duration.end),
+    tcpSetup: calculateAverageMetric(tcpHealth, 'setup', alertMetadata.duration.start, alertMetadata.duration.end),
+    tcpRst: calculateAverageMetric(tcpHealth, 'rst', alertMetadata.duration.start, alertMetadata.duration.end),
+  };
 
   // Handle expand/collapse and notify parent - wrapped in useCallback for stable reference
   const handleExpandToggle = React.useCallback((expanded: boolean) => {
@@ -276,15 +289,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend
-                    content={
-                      <CustomLegendWithInfo
-                        chartType="tcp"
-                        data={tcpHealth}
-                        alertMetadata={alertMetadata}
-                      />
-                    }
-                  />
+                  <Legend />
                   <ReferenceArea
                     yAxisId="left"
                     x1={alertMetadata.duration.start}
@@ -363,15 +368,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend
-                    content={
-                      <CustomLegendWithInfo
-                        chartType="network"
-                        data={networkHealth}
-                        alertMetadata={alertMetadata}
-                      />
-                    }
-                  />
+                  <Legend />
                   <ReferenceArea
                     x1={alertMetadata.duration.start}
                     x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}
@@ -419,9 +416,29 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                 </AreaChart>
               )}
             </ResponsiveContainer>
+
+            {/* View Details Button */}
+            <div className="flex justify-center pt-2 pb-3">
+              <button
+                onClick={() => setIsPanelOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-sm"
+              >
+                <Info className="h-4 w-4" />
+                查看指标详情
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Metric Explanation Panel */}
+      <MetricExplanationPanel
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        activeMetric={activeMetric}
+        metricValues={metricValues}
+        onMetricChange={setActiveMetric}
+      />
     </div>
   );
 };
