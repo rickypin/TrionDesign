@@ -48,7 +48,7 @@ export const placeholderNetworkHealth: NetworkHealthData[] = [
 ];
 
 export const placeholderTcpHealth: TcpHealthData[] = [
-  { t: "21:21", setup: 99.9, rst: 2 },
+  { t: "21:21", setup: 99.9, rst: 2 },   // 基线水平 - Availability 正常，保持平滑
   { t: "21:22", setup: 99.9, rst: 2 },
   { t: "21:23", setup: 99.9, rst: 2 },
   { t: "21:24", setup: 99.9, rst: 2 },
@@ -57,8 +57,8 @@ export const placeholderTcpHealth: TcpHealthData[] = [
   { t: "21:27", setup: 99.9, rst: 2 },
   { t: "21:28", setup: 99.9, rst: 2 },
   { t: "21:29", setup: 99.9, rst: 2 },
-  { t: "21:30", setup: 99.9, rst: 2 },
-  { t: "21:31", setup: 99.9, rst: 2 },
+  { t: "21:30", setup: 99.9, rst: 2 },   // S3 场景：Availability 正常，TCP 层面无问题
+  { t: "21:31", setup: 99.9, rst: 2 },   // 问题在 Performance 层面（网络性能）
   { t: "21:32", setup: 99.9, rst: 2 },
   { t: "21:33", setup: 99.9, rst: 2 },
   { t: "21:34", setup: 99.9, rst: 2 },

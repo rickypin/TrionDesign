@@ -48,19 +48,19 @@ export const networkIssueNetworkHealth: NetworkHealthData[] = [
 ];
 
 export const networkIssueTcpHealth: TcpHealthData[] = [
-  { t: "21:21", setup: 99.9, rst: 2 },
+  { t: "21:21", setup: 99.9, rst: 2 },   // 基线水平
   { t: "21:22", setup: 99.9, rst: 2 },
   { t: "21:23", setup: 99.9, rst: 2 },
   { t: "21:24", setup: 99.9, rst: 2 },
   { t: "21:25", setup: 99.9, rst: 2 },
   { t: "21:26", setup: 99.9, rst: 2 },
-  { t: "21:27", setup: 99.9, rst: 2 },
-  { t: "21:28", setup: 99.9, rst: 2 },
-  { t: "21:29", setup: 99.9, rst: 2 },
-  { t: "21:30", setup: 99.9, rst: 2 },
-  { t: "21:31", setup: 99.9, rst: 2 },
-  { t: "21:32", setup: 99.9, rst: 2 },
-  { t: "21:33", setup: 99.9, rst: 2 },
+  { t: "21:27", setup: 96.5, rst: 2 },   // 告警开始，TCP Setup Success 开始下降，RST 保持平滑
+  { t: "21:28", setup: 93.2, rst: 2 },   // 继续下降
+  { t: "21:29", setup: 90.8, rst: 2 },   // 持续恶化
+  { t: "21:30", setup: 88.5, rst: 2 },   // 最低点 - 与 Transaction Count 最低点对齐
+  { t: "21:31", setup: 91.8, rst: 2 },   // 开始恢复
+  { t: "21:32", setup: 95.2, rst: 2 },   // 快速恢复
+  { t: "21:33", setup: 99.9, rst: 2 },   // 恢复到基线 - 告警结束
   { t: "21:34", setup: 99.9, rst: 2 },
   { t: "21:35", setup: 99.9, rst: 2 },
   { t: "21:36", setup: 99.9, rst: 2 },
