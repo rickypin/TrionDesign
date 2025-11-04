@@ -176,7 +176,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                 Network Correlation
               </h3>
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold ${
                   isHealthy
                     ? 'bg-green-600 text-white'
                     : 'bg-amber-300 text-amber-900 dark:bg-amber-500 dark:text-amber-950'

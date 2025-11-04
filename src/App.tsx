@@ -566,7 +566,7 @@ export default function App(): React.ReactElement {
           {/* Alert Header with Time Info */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 border-b border-neutral-200/70 dark:border-neutral-700">
             <div className="flex items-center gap-2 flex-1">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-600 dark:bg-red-600">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-red-600 dark:bg-red-600">
                 <AlertTriangle className="h-4 w-4 text-white" />
                 <span className="text-xs font-bold text-white tracking-wide">CRITICAL</span>
               </div>
