@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
 import { Minimize2, Maximize2 } from 'lucide-react';
+import { CustomLegendWithInfo } from './CustomLegendWithInfo';
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
 
@@ -275,7 +276,15 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    content={
+                      <CustomLegendWithInfo
+                        chartType="tcp"
+                        data={tcpHealth}
+                        alertMetadata={alertMetadata}
+                      />
+                    }
+                  />
                   <ReferenceArea
                     yAxisId="left"
                     x1={alertMetadata.duration.start}
@@ -354,7 +363,15 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    content={
+                      <CustomLegendWithInfo
+                        chartType="network"
+                        data={networkHealth}
+                        alertMetadata={alertMetadata}
+                      />
+                    }
+                  />
                   <ReferenceArea
                     x1={alertMetadata.duration.start}
                     x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}

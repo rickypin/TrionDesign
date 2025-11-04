@@ -6,6 +6,8 @@ import { getRowColorClass, shouldBold as shouldBoldValue } from "@/utils/tableCo
 export { NetworkAssessment } from "./NetworkAssessment";
 export { NetworkCorrelationCompact } from "./NetworkCorrelationCompact";
 export { NetworkCorrelationSidebar } from "./NetworkCorrelationSidebar";
+export { MetricInfoTooltip } from "./MetricInfoTooltip";
+export { CustomLegendWithInfo } from "./CustomLegendWithInfo";
 
 export const Card: React.FC<CardProps> = ({ children, className = "" }) => (
   <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5 ${className}`}>
