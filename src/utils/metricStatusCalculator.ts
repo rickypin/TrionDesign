@@ -27,13 +27,13 @@ export const getStatusMessage = (
   unit: string = '%'
 ): string => {
   const { warning, critical, reverse = false } = threshold;
-  
+
   if (status === 'normal') {
-    return `✅ 正常 - ${metricName} ${value}${unit}（正常 ${reverse ? '≥' : '<'}${warning}${unit}）`;
+    return `✅ Normal - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   } else if (status === 'warning') {
-    return `⚠️ 轻微影响 - ${metricName} ${value}${unit}（正常 ${reverse ? '≥' : '<'}${warning}${unit}）`;
+    return `⚠️ Minor Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   } else {
-    return `🔴 严重影响 - ${metricName} ${value}${unit}（正常 ${reverse ? '≥' : '<'}${warning}${unit}）`;
+    return `🔴 Severe Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   }
 };
 

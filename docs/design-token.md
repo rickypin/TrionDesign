@@ -318,10 +318,11 @@ TrionDesign/
 │   │   ├── handlers/
 │   │   │   └── index.ts     # API 请求处理器（103行）
 │   │   └── data/
-│   │       └── scenarios/   # 场景数据
-│   │           ├── index.ts # 场景管理（128行）
-│   │           ├── default/ # 默认场景
-│   │           └── networkIssue/ # 网络问题场景
+│   │       └── scenarios/           # 场景数据
+│   │           ├── index.ts         # 场景管理（128行）
+│   │           ├── app-gc/          # S1: App GC 场景
+│   │           ├── session-table-full/  # S2: 会话表满场景
+│   │           └── pmtud-black-hole/    # S3: PMTUD Black Hole 场景
 │   ├── utils/               # 工具函数
 │   │   ├── correlation.ts   # 关联分析（67行）
 │   │   ├── formatters.ts    # 格式化工具（45行）

@@ -27,7 +27,7 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
   
   // Calculate status if current value is provided
   const statusResult: MetricStatusResult | null = currentValue !== undefined
-    ? getMetricStatusResult(currentValue, metricInfo.threshold, metricInfo.name, unit)
+    ? getMetricStatusResult(currentValue, metricInfo.threshold, metricInfo.nameEn, unit)
     : null;
   
   // Calculate position when opening
@@ -36,30 +36,30 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
       const rect = iconRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
-      const tooltipWidth = 320;
-      const tooltipHeight = 400; // Estimated max height
-      const gap = 8;
-      
+
+      const tooltipWidth = 480; // Increased width to avoid text wrapping
+      const tooltipHeight = 500; // Estimated max height
+      const gap = 12;
+
       let top = rect.top;
       let left = rect.right + gap;
-      
+
       // Check if tooltip would overflow right edge
       if (left + tooltipWidth > viewportWidth - 16) {
         // Position to the left of icon
         left = rect.left - tooltipWidth - gap;
       }
-      
+
       // Check if tooltip would overflow bottom edge
       if (top + tooltipHeight > viewportHeight - 16) {
         top = Math.max(16, viewportHeight - tooltipHeight - 16);
       }
-      
+
       // Ensure minimum top padding
       if (top < 16) {
         top = 16;
       }
-      
+
       setPosition({ top, left });
     }
   }, [isOpen]);
@@ -128,7 +128,7 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
             ? 'text-blue-700 dark:text-blue-400 scale-110'
             : 'text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110'
         }`}
-        aria-label={`查看 ${metricInfo.name} 说明`}
+        aria-label={`View ${metricInfo.nameEn} details`}
       >
         <Info className="w-full h-full" />
       </button>
@@ -137,10 +137,11 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
       {isOpen && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed z-[9999] w-80 max-h-96 overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg shadow-xl animate-in fade-in zoom-in-95 duration-200"
+          className="fixed z-[9999] w-[480px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg shadow-xl transition-opacity duration-150"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
+            opacity: position.top === 0 ? 0 : 1,
           }}
         >
           {/* Header */}
@@ -148,67 +149,67 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-lg">{metricInfo.icon}</span>
               <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                {metricInfo.name} ({metricInfo.nameEn})
+                {metricInfo.nameEn}
               </h4>
             </div>
             <button
               onClick={() => setIsOpen(false)}
               className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-              aria-label="关闭"
+              aria-label="Close"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
           
           {/* Content */}
-          <div className="px-4 py-3 space-y-3 text-xs">
+          <div className="px-4 py-3 space-y-2.5 text-xs">
             {/* Definition */}
             <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">定义</h5>
-              <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Definition</h5>
+              <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
                 {metricInfo.definition}
               </p>
             </div>
-            
+
             {/* Explanation */}
             <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">通俗解释</h5>
-              <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Explanation</h5>
+              <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
                 {metricInfo.explanation}
               </p>
             </div>
-            
+
             {/* Impact */}
             <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">对交易的影响</h5>
-              <ul className="space-y-1">
+              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Impact on Transactions</h5>
+              <ul className="space-y-0.5">
                 {metricInfo.impact.map((item, index) => (
-                  <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                  <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-snug">
                     • {item}
                   </li>
                 ))}
               </ul>
             </div>
-            
+
             {/* Current Status */}
             {statusResult && (
               <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">当前状态</h5>
-                <div className={`px-3 py-2 rounded-md ${getStatusColor(statusResult.status)}`}>
-                  <p className="font-medium leading-relaxed">
+                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Current Status</h5>
+                <div className={`px-3 py-1.5 rounded-md ${getStatusColor(statusResult.status)}`}>
+                  <p className="font-medium leading-snug">
                     {statusResult.message}
                   </p>
                 </div>
               </div>
             )}
-            
+
             {/* Possible Causes or Normal Message */}
             {statusResult && statusResult.status !== 'normal' ? (
               <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">可能原因</h5>
-                <ul className="space-y-1">
+                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Possible Causes</h5>
+                <ul className="space-y-0.5">
                   {metricInfo.possibleCauses.map((cause, index) => (
-                    <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                    <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-snug">
                       • {cause}
                     </li>
                   ))}
@@ -216,8 +217,8 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
               </div>
             ) : statusResult && metricInfo.normalMessage && (
               <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1">保持良好</h5>
-                <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Maintaining Good Performance</h5>
+                <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
                   {metricInfo.normalMessage}
                 </p>
               </div>

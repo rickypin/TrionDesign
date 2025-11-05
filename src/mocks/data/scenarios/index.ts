@@ -16,62 +16,62 @@ import type {
 } from '@/types';
 import type { AlertMetadata, DimensionConfig, ScenarioStatus } from '@/types/alert';
 
-// Default scenario
-import { 
-  defaultAlertMetadata, 
-  defaultDimensionConfig, 
-  defaultScenarioStatus 
-} from './default/alert';
-import { 
-  defaultResponseRate, 
-  defaultNetworkHealth, 
-  defaultTcpHealth 
-} from './default/metrics';
-import { 
-  defaultTransType, 
-  defaultClients, 
-  defaultServers, 
-  defaultChannels, 
-  defaultReturnCodes 
-} from './default/dimensions';
+// S1: App GC scenario
+import {
+  defaultAlertMetadata,
+  defaultDimensionConfig,
+  defaultScenarioStatus
+} from './app-gc/alert';
+import {
+  defaultResponseRate,
+  defaultNetworkHealth,
+  defaultTcpHealth
+} from './app-gc/metrics';
+import {
+  defaultTransType,
+  defaultClients,
+  defaultServers,
+  defaultChannels,
+  defaultReturnCodes
+} from './app-gc/dimensions';
 
-// Network Issue scenario
+// S2: Session Table Full scenario
 import {
   networkIssueAlertMetadata,
   networkIssueDimensionConfig,
   networkIssueScenarioStatus
-} from './networkIssue/alert';
+} from './session-table-full/alert';
 import {
   networkIssueResponseRate,
   networkIssueNetworkHealth,
   networkIssueTcpHealth
-} from './networkIssue/metrics';
+} from './session-table-full/metrics';
 import {
   networkIssueTransType,
   networkIssueClients,
   networkIssueServers,
   networkIssueChannels,
   networkIssueReturnCodes
-} from './networkIssue/dimensions';
+} from './session-table-full/dimensions';
 
-// Placeholder scenario
+// S3: PMTUD Black Hole scenario
 import {
   placeholderAlertMetadata,
   placeholderDimensionConfig,
   placeholderScenarioStatus
-} from './placeholder/alert';
+} from './pmtud-black-hole/alert';
 import {
   placeholderResponseRate,
   placeholderNetworkHealth,
   placeholderTcpHealth
-} from './placeholder/metrics';
+} from './pmtud-black-hole/metrics';
 import {
   placeholderTransType,
   placeholderClients,
   placeholderServers,
   placeholderChannels,
   placeholderReturnCodes
-} from './placeholder/dimensions';
+} from './pmtud-black-hole/dimensions';
 
 // Scenario data structure
 export interface ScenarioData {

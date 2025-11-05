@@ -47,12 +47,16 @@ src/
 │   │   └── index.ts          # API 请求处理器
 │   └── data/
 │       └── scenarios/
-│           ├── index.ts      # 场景数据索引
-│           ├── default/      # 场景 1：默认场景
+│           ├── index.ts              # 场景数据索引
+│           ├── app-gc/               # S1: App GC 导致成功率下降
 │           │   ├── alert.ts
 │           │   ├── metrics.ts
 │           │   └── dimensions.ts
-│           └── networkIssue/ # 场景 2：网络故障
+│           ├── session-table-full/   # S2: 防火墙会话表满导致交易量下降
+│           │   ├── alert.ts
+│           │   ├── metrics.ts
+│           │   └── dimensions.ts
+│           └── pmtud-black-hole/     # S3: PMTUD Black Hole 导致响应率下降
 │               ├── alert.ts
 │               ├── metrics.ts
 │               └── dimensions.ts

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
-import { Minimize2, Maximize2, Info } from 'lucide-react';
-import { MetricExplanationPanel } from './MetricExplanationPanel';
-import { calculateAverageMetric } from '@/utils/metricStatusCalculator';
+import { Minimize2, Maximize2 } from 'lucide-react';
+import { CustomLegendWithInfo } from './CustomLegendWithInfo';
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
-import type { MetricKey } from '@/types/networkMetrics';
 
 interface NetworkCorrelationSidebarProps {
   networkHealth: NetworkHealthData[];
@@ -41,19 +39,8 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
     details.performance === 'error' ? 'network' : 'tcp'
   );
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [activeMetric, setActiveMetric] = useState<MetricKey | undefined>(undefined);
 
   const isHealthy = !hasImpact;
-
-  // Calculate metric values for the panel
-  const metricValues: Record<MetricKey, number | undefined> = {
-    packetLoss: calculateAverageMetric(networkHealth, 'loss', alertMetadata.duration.start, alertMetadata.duration.end),
-    retransmission: calculateAverageMetric(networkHealth, 'retrans', alertMetadata.duration.start, alertMetadata.duration.end),
-    duplicateAck: calculateAverageMetric(networkHealth, 'dupAck', alertMetadata.duration.start, alertMetadata.duration.end),
-    tcpSetup: calculateAverageMetric(tcpHealth, 'setup', alertMetadata.duration.start, alertMetadata.duration.end),
-    tcpRst: calculateAverageMetric(tcpHealth, 'rst', alertMetadata.duration.start, alertMetadata.duration.end),
-  };
 
   // Handle expand/collapse and notify parent - wrapped in useCallback for stable reference
   const handleExpandToggle = React.useCallback((expanded: boolean) => {
@@ -102,6 +89,21 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   };
 
   const statusInfo = getStatusText();
+
+  // Get interpretation text based on active chart and status
+  const getInterpretationText = () => {
+    if (activeChart === 'tcp') {
+      if (details.availability === 'error') {
+        return 'TCP Setup Failure leads to decreased transaction volume; TCP RST causes reduced transaction response rate';
+      }
+      return 'TCP connection establishment is stable with no impact on transaction metrics';
+    } else {
+      if (details.performance === 'error') {
+        return 'Packet Loss, Retransmission and Duplicate ACK cause degraded transaction response time and response rate';
+      }
+      return 'Network performance metrics are healthy with no impact on transaction metrics';
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -247,9 +249,9 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
             </div>
           </div>
 
-          {/* Chart Container - Aligned with Alert Summary */}
-          <div className="px-4 pb-3 pt-3">
-            <ResponsiveContainer width="100%" height={360}>
+          {/* Chart Container - Reduced height to make room for interpretation */}
+          <div className="px-4 pb-2 pt-3">
+            <ResponsiveContainer width="100%" height={280}>
               {activeChart === 'tcp' ? (
                 <LineChart data={tcpHealth} margin={{ top: 10, right: 20, left: 10, bottom: 10 }} syncId="timeSeriesSync">
                   <CartesianGrid
@@ -289,7 +291,15 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    content={
+                      <CustomLegendWithInfo
+                        chartType="tcp"
+                        data={tcpHealth}
+                        alertMetadata={alertMetadata}
+                      />
+                    }
+                  />
                   <ReferenceArea
                     yAxisId="left"
                     x1={alertMetadata.duration.start}
@@ -368,7 +378,15 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    content={
+                      <CustomLegendWithInfo
+                        chartType="network"
+                        data={networkHealth}
+                        alertMetadata={alertMetadata}
+                      />
+                    }
+                  />
                   <ReferenceArea
                     x1={alertMetadata.duration.start}
                     x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}
@@ -416,29 +434,23 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                 </AreaChart>
               )}
             </ResponsiveContainer>
+          </div>
 
-            {/* View Details Button */}
-            <div className="flex justify-center pt-2 pb-3">
-              <button
-                onClick={() => setIsPanelOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-sm"
-              >
-                <Info className="h-4 w-4" />
-                查看指标详情
-              </button>
+          {/* Interpretation Section */}
+          <div className="px-4 pb-3">
+            <div className={`px-3 py-2.5 rounded-lg ${
+              (activeChart === 'tcp' && details.availability === 'error') ||
+              (activeChart === 'network' && details.performance === 'error')
+                ? 'bg-amber-50/60 dark:bg-amber-800/35'
+                : 'bg-blue-50/60 dark:bg-blue-900/25'
+            }`}>
+              <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 text-center">
+                {getInterpretationText()}
+              </p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Metric Explanation Panel */}
-      <MetricExplanationPanel
-        isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-        activeMetric={activeMetric}
-        metricValues={metricValues}
-        onMetricChange={setActiveMetric}
-      />
     </div>
   );
 };
