@@ -69,8 +69,8 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   const getStatusText = () => {
     if (isHealthy) {
       return {
-        badge: 'Normal',
-        description: 'Network metrics show no correlation with response rate degradation.',
+        badge: 'Not Correlated',
+        description: 'Network metrics show no correlation with the alert.',
         availability: 'Normal',
         performance: 'Normal',
       };
@@ -78,10 +78,10 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
       const issues = [];
       if (details.availability === 'error') issues.push('Availability degraded');
       if (details.performance === 'error') issues.push('Performance degraded');
-      
+
       return {
-        badge: 'Impacted',
-        description: `Network layer issues detected during alert period - ${issues.join(', ')}.`,
+        badge: 'Correlated',
+        description: `Network issues detected and correlated with alert - ${issues.join(', ')}.`,
         availability: details.availability === 'error' ? 'Degraded' : 'Normal',
         performance: details.performance === 'error' ? 'Degraded' : 'Normal',
       };
@@ -124,19 +124,14 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
             </button>
           </div>
           <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold tracking-wider text-neutral-500 dark:text-neutral-400">
-                NETWORK STATUS
-              </span>
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${
-                  isHealthy
-                    ? 'bg-green-600 text-white'
-                    : 'bg-amber-300 text-amber-900 dark:bg-amber-500 dark:text-amber-950'
-                }`}
-              >
-                {statusInfo.badge}
-              </span>
+            <div
+              className={`w-full py-2 rounded-md text-center text-xs font-bold ${
+                isHealthy
+                  ? 'bg-green-600 text-white'
+                  : 'bg-amber-300 text-amber-900 dark:bg-amber-500 dark:text-amber-950'
+              }`}
+            >
+              {statusInfo.badge}
             </div>
           </div>
         </>
