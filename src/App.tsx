@@ -58,45 +58,43 @@ export default function App(): React.ReactElement {
     return rawResponseRate;
   }, [rawResponseRate, alertMetadata]);
 
-  // Find most impacted items using table coloring logic (outlier detection) - memoized for performance
-  const mostImpactedItems = useMemo(() => {
-    interface MostImpactedItem {
-      type: 'transType' | 'returnCode' | 'server' | 'client' | 'channel';
-      name: string;
-      impact: number;
-    }
+  // Find most impacted items using table coloring logic (outlier detection)
+  interface MostImpactedItem {
+    type: 'transType' | 'returnCode' | 'server' | 'client' | 'channel';
+    name: string;
+    impact: number;
+  }
 
-    const items: MostImpactedItem[] = [];
+  const items: MostImpactedItem[] = [];
 
-    // Find outliers in each dimension
-    const transTypeOutliers = findOutliers(transType, 'impact');
-    transTypeOutliers.forEach(item => {
-      items.push({ type: 'transType', name: item.type, impact: item.impact });
-    });
+  // Find outliers in each dimension
+  const transTypeOutliers = findOutliers(transType, 'impact');
+  transTypeOutliers.forEach(item => {
+    items.push({ type: 'transType', name: item.type, impact: item.impact });
+  });
 
-    const returnCodeOutliers = findOutliers(returnCodes, 'impact');
-    returnCodeOutliers.forEach(item => {
-      items.push({ type: 'returnCode', name: String(item.code), impact: item.impact });
-    });
+  const returnCodeOutliers = findOutliers(returnCodes, 'impact');
+  returnCodeOutliers.forEach(item => {
+    items.push({ type: 'returnCode', name: String(item.code), impact: item.impact });
+  });
 
-    const serverOutliers = findOutliers(servers, 'impact');
-    serverOutliers.forEach(item => {
-      items.push({ type: 'server', name: item.ip, impact: item.impact });
-    });
+  const serverOutliers = findOutliers(servers, 'impact');
+  serverOutliers.forEach(item => {
+    items.push({ type: 'server', name: item.ip, impact: item.impact });
+  });
 
-    const clientOutliers = findOutliers(clients, 'impact');
-    clientOutliers.forEach(item => {
-      items.push({ type: 'client', name: item.ip, impact: item.impact });
-    });
+  const clientOutliers = findOutliers(clients, 'impact');
+  clientOutliers.forEach(item => {
+    items.push({ type: 'client', name: item.ip, impact: item.impact });
+  });
 
-    const channelOutliers = findOutliers(channels, 'impact');
-    channelOutliers.forEach(item => {
-      items.push({ type: 'channel', name: item.channel, impact: item.impact });
-    });
+  const channelOutliers = findOutliers(channels, 'impact');
+  channelOutliers.forEach(item => {
+    items.push({ type: 'channel', name: item.channel, impact: item.impact });
+  });
 
-    // Sort by impact descending
-    return items.sort((a, b) => b.impact - a.impact);
-  }, [transType, returnCodes, servers, clients, channels]);
+  // Sort by impact descending
+  const mostImpactedItems = items.sort((a, b) => b.impact - a.impact);
 
 
 

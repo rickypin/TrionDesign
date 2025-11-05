@@ -66,8 +66,8 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
                   Most Impacted:
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {mostImpactedItems.map((item, index) => (
-                    <div key={index} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-300 dark:bg-amber-300">
+                  {mostImpactedItems.map((item) => (
+                    <div key={`${item.type}-${item.name}`} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-300 dark:bg-amber-300">
                       <span className="text-xs text-neutral-900 dark:text-neutral-900">
                         {(() => {
                           switch (item.type) {

@@ -1,9 +1,19 @@
 /**
  * Table coloring utilities for outlier detection
- * 
+ *
  * This module provides functions to detect outliers in data based on statistical analysis.
  * Used for highlighting impacted items in tables and determining "Most Impacted" items.
  */
+
+// Outlier detection configuration constants
+const OUTLIER_CONFIG = {
+  ABSOLUTE_THRESHOLD: 15,      // Minimum value (%) to be considered for outlier detection
+  BOLD_THRESHOLD: 20,          // Minimum value (%) to apply bold styling
+  Z_SCORE_THRESHOLD: 1.5,      // Z-score threshold for statistical outlier detection
+  MULTIPLE_THRESHOLD: 1.8,     // Multiple of second highest value
+  DOMINANCE_THRESHOLD: 40,     // Percentage of total to be considered dominant
+  MIN_CONDITIONS_MET: 2,       // Minimum relative conditions to meet
+} as const;
 
 export interface OutlierItem {
   value: number;
@@ -31,8 +41,7 @@ export function isOutlier(value: number, allValues: number[]): boolean {
   }
 
   // 1. Absolute threshold check
-  const ABSOLUTE_THRESHOLD = 15;
-  if (value < ABSOLUTE_THRESHOLD) {
+  if (value < OUTLIER_CONFIG.ABSOLUTE_THRESHOLD) {
     return false;
   }
 
@@ -46,18 +55,18 @@ export function isOutlier(value: number, allValues: number[]): boolean {
   // 2. Relative conditions
   // 2a. Z-score detection
   const zScore = stdDev > 0 ? Math.abs(value - mean) / stdDev : 0;
-  const isStatisticalOutlier = zScore >= 1.5;
+  const isStatisticalOutlier = zScore >= OUTLIER_CONFIG.Z_SCORE_THRESHOLD;
 
   // 2b. Multiple detection
-  const isMultipleOutlier = secondMax > 0 && value >= secondMax * 1.8;
+  const isMultipleOutlier = secondMax > 0 && value >= secondMax * OUTLIER_CONFIG.MULTIPLE_THRESHOLD;
 
   // 2c. Dominance detection
   const total = allValues.reduce((sum, v) => sum + v, 0);
   const percentage = total > 0 ? (value / total) * 100 : 0;
-  const isDominant = percentage >= 40;
+  const isDominant = percentage >= OUTLIER_CONFIG.DOMINANCE_THRESHOLD;
 
   // Must meet at least 2 relative conditions
-  const relativeConditionsMet = [isStatisticalOutlier, isMultipleOutlier, isDominant].filter(Boolean).length >= 2;
+  const relativeConditionsMet = [isStatisticalOutlier, isMultipleOutlier, isDominant].filter(Boolean).length >= OUTLIER_CONFIG.MIN_CONDITIONS_MET;
 
   return relativeConditionsMet;
 }
@@ -78,13 +87,12 @@ export function shouldBold(value: number, allValues: number[]): boolean {
     return false;
   }
 
-  const BOLD_THRESHOLD = 20;
   const mean = allValues.reduce((sum, v) => sum + v, 0) / allValues.length;
   const variance = allValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / allValues.length;
   const stdDev = Math.sqrt(variance);
   const zScore = stdDev > 0 ? Math.abs(value - mean) / stdDev : 0;
 
-  return value >= BOLD_THRESHOLD && zScore >= 1.5;
+  return value >= OUTLIER_CONFIG.BOLD_THRESHOLD && zScore >= OUTLIER_CONFIG.Z_SCORE_THRESHOLD;
 }
 
 /**

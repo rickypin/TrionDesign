@@ -2,10 +2,28 @@ import { useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
+// Safe localStorage wrapper to handle privacy mode and quota errors
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail in privacy mode
+    }
+  }
+};
+
 export const useTheme = () => {
   // 从 localStorage 读取用户偏好，默认为 'system'
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('theme');
+    const stored = safeLocalStorage.getItem('theme');
     return (stored as Theme) || 'system';
   });
 
@@ -44,7 +62,7 @@ export const useTheme = () => {
 
   const changeTheme = (newTheme: Theme) => {
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    safeLocalStorage.setItem('theme', newTheme);
   };
 
   // 获取当前实际显示的主题（解析 system）

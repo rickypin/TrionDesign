@@ -88,6 +88,8 @@ export function useAlertData(): UseAlertDataReturn {
    * Fetch all data - wrapped in useCallback to maintain stable reference
    */
   const fetchAllData = useCallback(async () => {
+    let cancelled = false;
+
     try {
       setLoading(true);
       setError(null);
@@ -119,23 +121,32 @@ export function useAlertData(): UseAlertDataReturn {
         fetchReturnCodes(),
       ]);
 
-      // Update state
-      setAlertMetadata(metadataData);
-      setDimensionConfig(configData);
-      setScenarioStatus(statusData);
-      setResponseRate(responseRateData);
-      setNetworkHealth(networkHealthData);
-      setTcpHealth(tcpHealthData);
-      setTransType(transTypeData);
-      setClients(clientsData);
-      setServers(serversData);
-      setChannels(channelsData);
-      setReturnCodes(returnCodesData);
+      // Only update state if component is still mounted
+      if (!cancelled) {
+        setAlertMetadata(metadataData);
+        setDimensionConfig(configData);
+        setScenarioStatus(statusData);
+        setResponseRate(responseRateData);
+        setNetworkHealth(networkHealthData);
+        setTcpHealth(tcpHealthData);
+        setTransType(transTypeData);
+        setClients(clientsData);
+        setServers(serversData);
+        setChannels(channelsData);
+        setReturnCodes(returnCodesData);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch data'));
-      console.error('Error fetching alert data:', err);
+      if (!cancelled) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch data'));
+        // Only log errors in development
+        if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+          console.error('Error fetching alert data:', err);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+      }
     }
   }, []); // Empty deps - all API functions are stable
 

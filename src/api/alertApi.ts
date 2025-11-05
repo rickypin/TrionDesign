@@ -8,6 +8,24 @@ import { apiRequest } from './request';
 
 const API_BASE = '/api';
 
+// Safe localStorage wrapper to handle privacy mode and quota errors
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail in privacy mode
+    }
+  }
+};
+
 /**
  * Fetch alert metadata
  */
@@ -34,8 +52,8 @@ export async function fetchScenarioStatus(): Promise<ScenarioStatus> {
  */
 export async function switchScenario(scenarioId: ScenarioId): Promise<void> {
   // Store in localStorage for MSW to read
-  localStorage.setItem('currentScenario', scenarioId);
-  
+  safeLocalStorage.setItem('currentScenario', scenarioId);
+
   // Optionally call an API endpoint (for future real backend)
   const response = await fetch(`${API_BASE}/scenarios/switch`, {
     method: 'POST',
@@ -44,7 +62,7 @@ export async function switchScenario(scenarioId: ScenarioId): Promise<void> {
     },
     body: JSON.stringify({ scenarioId }),
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to switch scenario: ${response.statusText}`);
   }
@@ -54,6 +72,6 @@ export async function switchScenario(scenarioId: ScenarioId): Promise<void> {
  * Get current scenario ID
  */
 export function getCurrentScenario(): ScenarioId {
-  return (localStorage.getItem('currentScenario') as ScenarioId) || 'app-gc';
+  return (safeLocalStorage.getItem('currentScenario') as ScenarioId) || 'app-gc';
 }
 
