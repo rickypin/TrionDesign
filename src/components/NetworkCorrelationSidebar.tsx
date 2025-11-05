@@ -199,8 +199,8 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold ${
                   isHealthy
-                    ? 'bg-green-600 text-white'
-                    : 'bg-amber-300 text-amber-900 dark:bg-amber-500 dark:text-amber-950'
+                    ? 'bg-green-600 dark:bg-green-600 text-white'
+                    : 'bg-amber-300 dark:bg-amber-300 text-neutral-900 dark:text-neutral-900'
                 }`}
               >
                 {statusInfo.badge}
@@ -429,7 +429,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
               (activeChart === 'tcp' && details.availability === 'error') ||
               (activeChart === 'network' && details.performance === 'error')
                 ? 'bg-amber-50/60 dark:bg-amber-800/35'
-                : 'bg-blue-50/60 dark:bg-blue-900/25'
+                : 'bg-green-50/60 dark:bg-green-900/25'
             }`}>
               <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 text-center flex items-center justify-center gap-2 flex-wrap">
                 {((activeChart === 'tcp' && details.availability === 'error') ||
