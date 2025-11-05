@@ -1,258 +1,191 @@
-# TrionDesign 前端开发规范文档
+# TrionDesign 前端开发规范
 
-## 📋 项目概述
+> **AI Agent 专用文档** - 清晰、简洁、可执行的开发规范
 
-这是一个现代化的应用性能监控仪表板（Application Performance Monitoring Dashboard），采用 **Modern, Minimal & Clear** 的设计理念，为用户提供简洁、高效的数据可视化体验。
+## 项目定位
 
----
-
-## 🛠️ 技术栈
-
-### 核心框架
-- **React** `18.2.0` - 前端 UI 框架
-- **TypeScript** `5.9.3` - 类型安全的 JavaScript 超集
-- **Vite** `5.0.0` - 新一代前端构建工具
-
-### 样式方案
-- **Tailwind CSS** `3.4.0` - 实用优先的 CSS 框架
-- **PostCSS** `8.4.0` - CSS 转换工具
-- **Autoprefixer** `10.4.0` - 自动添加浏览器前缀
-
-### UI 增强库
-- **Framer Motion** `11.0.0` - 强大的动画库
-- **Lucide React** `0.344.0` - 优雅的图标库
-- **Recharts** `2.9.0` - 数据可视化图表库
-
-### 开发工具
-- **@vitejs/plugin-react** - Vite 的 React 插件
-- **@types/react** & **@types/react-dom** - React 类型定义
-- **@types/node** - Node.js 类型定义
-- **MSW (Mock Service Worker)** `2.11.6` - API 模拟工具（开发环境）
+应用性能监控仪表板（APM Dashboard），设计理念：**Modern, Minimal & Clear**
 
 ---
 
-## 🎨 UI 设计规范
+## 技术栈
 
-### 设计原则
-遵循 **Modern, Minimal & Clear** 三大原则：
-
-1. **Modern（现代）** - 采用最新的设计趋势和技术
-2. **Minimal（简约）** - 去除冗余，聚焦核心功能
-3. **Clear（清晰）** - 信息层次分明，易于理解
-
-### 视觉风格
-
-#### 1. 布局特点
-- **卡片式布局**：所有内容模块使用 `Card` 组件封装
-- **圆角设计**：统一使用 `rounded-2xl`（16px）和 `rounded-xl`（12px）
-- **间距系统**：主容器间距使用 `space-y-6`（24px）
-- **内边距**：卡片内容使用 `p-4`（16px）
-- **响应式网格**：使用 `grid-cols-1 md:grid-cols-4` 等响应式布局
-
-#### 2. 毛玻璃效果（Glassmorphism）
-- **卡片背景**：`bg-white/70 dark:bg-neutral-900/70 backdrop-blur`
-- **顶部栏**：`bg-white/70 dark:bg-neutral-900/60 backdrop-blur`
-- **应用场景**：主要卡片、导航栏、浮动元素
-
-#### 3. 阴影与边框
-- **阴影**：`shadow-sm` 搭配 `ring-1 ring-black/5`
-- **分割线**：`border-neutral-200/70 dark:border-neutral-800/70`
-- **透明度**：适度使用透明度（/70, /60）增强层次感
+| 类别 | 技术 | 版本 |
+|------|------|------|
+| **核心** | React | 18.2.0 |
+| | TypeScript | 5.9.3 |
+| | Vite | 5.0.0 |
+| **样式** | Tailwind CSS | 3.4.0 |
+| **UI库** | Framer Motion | 11.0.0 |
+| | Lucide React | 0.344.0 |
+| | Recharts | 2.9.0 |
+| **开发** | MSW | 2.11.6 |
 
 ---
 
-## 🎨 配色规范
+## 配色系统
 
-### 主题系统
-项目支持**浅色模式**和**深色模式**切换，通过 Tailwind 的 `dark:` 变体实现。
+### 核心原则
+- 所有颜色必须提供 `dark:` 变体
+- Dark 模式使用 `neutral-900` 背景（非 `neutral-950`）
+- 卡片背景比页面背景更亮，形成层次
 
-#### Dark 模式设计原则
-为了确保 dark 模式下的视觉协调性和可读性，我们遵循以下原则：
+### 配色表
 
-1. **提高对比度** - 使用更浅的深色背景（neutral-900 而非 neutral-950），增强与卡片的对比
-2. **增强层次感** - 卡片背景使用 neutral-800/90，比页面背景更亮，形成清晰的层次
-3. **优化强调色** - 琥珀色、红色、绿色使用更高的透明度和更浅的色调，避免过暗
-4. **改进边框可见性** - 使用 neutral-600/700 而非 neutral-800，确保边框清晰可见
-5. **统一色彩饱和度** - 所有强调色在 dark 模式下使用相似的饱和度，保持视觉和谐
+#### 背景色
+```typescript
+// 页面背景
+bg-neutral-50 dark:bg-neutral-900
 
-### 配色方案
+// 卡片背景（毛玻璃效果）
+bg-white/70 dark:bg-neutral-800/90 backdrop-blur
 
-#### 1. 背景色（Background）
-| 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
-|------|---------|---------|------------|
-| 页面背景 | `#FAFAFA` | `#171717` | `bg-neutral-50 dark:bg-neutral-900` |
-| 卡片背景 | `rgba(255,255,255,0.7)` | `rgba(38,38,38,0.9)` | `bg-white/70 dark:bg-neutral-800/90` |
-| 头部背景 | `rgba(255,255,255,0.7)` | `rgba(38,38,38,0.8)` | `bg-white/70 dark:bg-neutral-800/80` |
-| 次级背景 | `#F5F5F5` | `#404040` | `bg-neutral-100 dark:bg-neutral-700` |
-| 三级背景 | `#F5F5F5` | `#525252` | `bg-neutral-100 dark:bg-neutral-600` |
+// 头部背景
+bg-white/70 dark:bg-neutral-800/80 backdrop-blur
 
-#### 2. 文字色（Text）
-| 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
-|------|---------|---------|------------|
-| 主文字 | `#171717` | `#FAFAFA` | `text-neutral-900 dark:text-neutral-100` |
-| 次要文字 | `#737373` | `#737373` | `text-neutral-500` |
-| 反色文字 | `#FFFFFF` | `#171717` | `text-white dark:text-neutral-900` |
+// 次级背景
+bg-neutral-100 dark:bg-neutral-700
 
-#### 3. 强调色（Accent）
-| 颜色 | 用途 | 示例类 |
-|------|------|-------|
-| **Amber（琥珀色）** | 警告、告警状态、数据高亮 | `bg-amber-100 dark:bg-amber-800/35`<br>`text-amber-600 dark:text-amber-300` |
-| **Red（红色）** | 错误、严重告警 | `bg-red-100 dark:bg-red-900/50`<br>`text-red-600 dark:text-red-300` |
-| **Green（绿色）** | 成功、正常状态 | `bg-green-100 dark:bg-green-900/50`<br>`text-green-600 dark:text-green-300` |
-| **Blue（蓝色）** | 信息提示 | `bg-blue-100 dark:bg-blue-900/50`<br>`text-blue-600 dark:text-blue-300` |
-| **Neutral Dark** | 主按钮 | `bg-neutral-900 dark:bg-white` |
+// 三级背景
+bg-neutral-100 dark:bg-neutral-600
+```
 
-#### 4. 边框色（Border）
-| 用途 | 浅色模式 | 深色模式 | Tailwind 类 |
-|------|---------|---------|------------|
-| 主边框 | `rgba(229,229,229,0.7)` | `rgba(82,82,82,0.5)` | `border-neutral-200/70 dark:border-neutral-600/50` |
-| 次级边框 | `rgba(229,229,229,0.7)` | `rgba(64,64,64,1)` | `border-neutral-200/70 dark:border-neutral-700` |
-| 表格边框 | `#F5F5F5` | `#525252` | `border-neutral-100 dark:border-neutral-600` |
-| 聚焦边框 | `rgba(0,0,0,0.05)` | - | `ring-1 ring-black/5` |
+#### 文字色
+```typescript
+// 主文字
+text-neutral-900 dark:text-neutral-100
+
+// 次要文字
+text-neutral-500
+
+// 反色文字（用于深色按钮）
+text-white dark:text-neutral-900
+```
+
+#### 强调色
+```typescript
+// 警告/高亮（琥珀色）
+bg-amber-300 dark:bg-amber-300
+text-neutral-900 dark:text-neutral-900
+
+// 错误（红色）
+bg-red-100 dark:bg-red-900/50
+text-red-600 dark:text-red-300
+
+// 成功（绿色）
+bg-green-100 dark:bg-green-900/50
+text-green-600 dark:text-green-300
+
+// 信息（蓝色）
+bg-blue-100 dark:bg-blue-900/50
+text-blue-600 dark:text-blue-300
+```
+
+#### 边框色
+```typescript
+// 主边框
+border-neutral-200/70 dark:border-neutral-600/50
+
+// 次级边框
+border-neutral-200/70 dark:border-neutral-700
+
+// 表格边框
+border-neutral-100 dark:border-neutral-600
+
+// 聚焦边框
+ring-1 ring-black/5
+```
 
 ---
 
-## 🧩 组件规范
+## 组件系统
 
-### 组件架构
-项目采用**原子化组件设计**，组件分为以下层次：
+### 组件分类
 
-```
-src/components/
-├── index.tsx                      # 基础组件定义和导出
-│   ├── Card                       # 卡片容器（基础组件）
-│   ├── SectionHeader              # 区块标题（组合组件）
-│   ├── KPI                        # 关键指标卡片（组合组件）
-│   └── Table                      # 数据表格（组合组件）
-├── CorrelationInsight.tsx         # 关联分析组件（复杂组件）
-├── NetworkAssessment.tsx          # 网络评估组件（复杂组件）
-├── NetworkCorrelationCompact.tsx  # 紧凑网络关联组件（复杂组件，已弃用）
-└── NetworkCorrelationSidebar.tsx  # 网络关联侧边栏组件（复杂组件，当前使用）
-```
+**基础组件**（定义在 `src/components/index.tsx`）：
+- `Card` - 卡片容器
+- `Table` - 数据表格（支持排序、着色）
 
-### 核心组件
+**复杂组件**（独立文件）：
+- `AlertSummaryChart` - 告警摘要图表
+- `BusinessImpactSection` - 业务影响区块
+- `NetworkCorrelationSidebar` - 网络关联侧边栏
+- `MetricInfoTooltip` - 指标信息提示
+- `CustomLegendWithInfo` - 自定义图例
+- `IPTooltip` - IP 地址工具提示
+- 其他辅助组件
 
-#### 1. Card 卡片组件
+### 核心组件规范
+
+#### Card 组件
 ```tsx
-<Card className={className}>
-  {children}
-</Card>
+// 用法
+<Card className={className}>{children}</Card>
+
+// 样式
+className="rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5"
 ```
 
-**特性**：
-- 统一的圆角、阴影、边框样式
-- 支持深色模式
-- 毛玻璃效果
-- 可扩展 className
-
-**样式特征**：
-- `rounded-xl`（12px 圆角）
-- `bg-white/70 dark:bg-neutral-800/90`（半透明背景）
-- `backdrop-blur`（毛玻璃）
-- `shadow-sm ring-1 ring-black/5`（阴影与边框）
-
-#### 2. SectionHeader 区块标题
+#### Table 组件
 ```tsx
-<SectionHeader
-  icon={IconComponent}
-  title="标题"
-  subtitle="副标题"
-  right={<RightContent />}
-  variant="red" | "blue" | "green"  // 可选，默认无色
-/>
-```
-
-**特性**：
-- 左侧图标 + 标题 + 副标题布局
-- 可选右侧内容区
-- 统一的底部分割线
-- 支持彩色图标容器变体（red/blue/green）
-
-**样式特征**：
-- 图标容器（默认）：`p-2 rounded-xl bg-neutral-100 dark:bg-neutral-700`
-- 图标容器（red）：`p-2 rounded-xl bg-red-50 dark:bg-red-950/30`
-- 图标容器（blue）：`p-2 rounded-xl bg-blue-50 dark:bg-blue-950/30`
-- 图标容器（green）：`p-2 rounded-xl bg-green-50 dark:bg-green-950/30`
-- 标题：`text-base font-semibold`
-- 副标题：`text-xs text-neutral-500`
-
-#### 3. KPI 关键指标卡片
-```tsx
-<KPI
-  label="指标名称"
-  value="77.43%"
-  trend="趋势描述"
-  icon={IconComponent}
-/>
-```
-
-**特性**：
-- 上方标签 + 图标
-- 中间大号数值
-- 下方趋势信息
-- 自动继承 Card 样式
-
-**样式特征**：
-- 标签：`text-xs text-neutral-500`
-- 数值：`text-xl font-semibold tracking-tight`
-- 趋势：`text-xs text-neutral-500`
-
-#### 4. Table 数据表格
-```tsx
-<Table 
+// 用法
+<Table
   keyField="id"
   columns={[
     { key: 'name', title: '名称' },
     { key: 'value', title: '数值', render: (v) => `${v}%` }
   ]}
   data={dataArray}
+  colorColumn="value"  // 可选，指定着色列
+  defaultSortColumn="value"  // 可选
+  defaultSortDirection="desc"  // 可选
 />
+
+// 特性
+- 点击表头排序
+- 基于统计学的智能着色（离群值检测）
+- 离群值高亮：bg-amber-300 dark:bg-amber-300 text-neutral-900
 ```
 
-**特性**：
-- 支持自定义列渲染函数
-- 响应式横向滚动
-- 统一的表格样式
-
-**样式特征**：
-- 表头：`text-neutral-500 font-medium`
-- 单元格：`px-4 py-3 whitespace-nowrap`
-- 行分割：`border-t border-neutral-100 dark:border-neutral-800`
-
-#### 5. CorrelationInsight 关联分析组件
+#### AlertSummaryChart 组件
 ```tsx
-<CorrelationInsight
-  data={correlationData}
-  threshold={0.7}
+// 用法
+<AlertSummaryChart
+  responseRate={responseRateData}
+  alertMetadata={alertMetadata}
+  chartConfig={chartConfig}
+  resolvedTheme={theme}
 />
+
+// 特性
+- 动态 Y 轴配置
+- 参考线和参考区域
+- 告警时间点标注
 ```
 
-**特性**：
-- 展示维度间的关联性分析
-- 自动计算相关系数
-- 高亮显示强相关关系
-- 支持自定义阈值
-
-**用途**：用于展示不同维度（如交易类型、客户端、服务器等）之间的关联强度。
-
-#### 6. NetworkAssessment 网络评估组件
+#### BusinessImpactSection 组件
 ```tsx
-<NetworkAssessment
-  status={networkStatus}
-  details={healthDetails}
+// 用法
+<BusinessImpactSection
+  mostImpactedItems={mostImpactedItems}
+  transType={transType}
+  returnCodes={returnCodes}
+  channels={channels}
+  servers={servers}
+  clients={clients}
+  dimensionConfig={dimensionConfig}
+  successRateColumnConfig={successRateColumnConfig}
 />
+
+// 特性
+- 展示最受影响的维度项
+- 多维度数据表格
+- IP 地址工具提示
 ```
 
-**特性**：
-- 展示网络健康状态评估
-- 多层级数据展示（整体状态 → 详细指标）
-- 支持健康度分级（健康/警告/异常）
-- 彩色状态指示器
-
-**用途**：用于展示网络层面的健康评估，包括连接质量、延迟、丢包等指标。
-
-#### 7. NetworkCorrelationSidebar 网络关联侧边栏组件
+#### NetworkCorrelationSidebar 组件
 ```tsx
+// 用法
 <NetworkCorrelationSidebar
   networkHealth={networkHealthData}
   tcpHealth={tcpHealthData}
@@ -265,121 +198,90 @@ src/components/
   getReferenceAreaColor={getReferenceAreaColor}
   getReferenceLineColor={getReferenceLineColor}
 />
+
+// 特性
+- 固定宽度侧边栏（xl: 280px）
+- 默认显示摘要，可展开详情
+- 双指标切换（Availability/Performance）
+- 状态徽章（Normal/Impacted）
 ```
-
-**特性**：
-- **固定宽度侧边栏**：xl 屏幕上固定 280px 宽度，小屏幕全宽
-- **智能摘要优先**：默认显示网络状态结论（Normal/Impacted）
-- **可展开详情**：点击"View Details"展开完整图表分析
-- **空间高效**：垂直布局优化，最小化横向空间占用
-- **双指标切换**：支持 Availability（TCP）和 Performance（网络）指标切换
-- **状态指示器**：彩色徽章快速识别网络健康状态
-- **响应式动画**：展开/折叠使用平滑过渡动画
-
-**设计理念**：
-- 面向高层管理者，强调"结论优先"而非"数据优先"
-- 侧边栏形式降低视觉权重，突出 Business Impact 的主导地位
-- 默认状态下只显示关键判断（网络是否为问题根因）
-- 保留技术追溯能力，通过展开查看详细指标
-- 符合"Modern, Minimal & Clear"设计原则
-
-**布局策略**：
-- xl 屏幕：Business Impact（弹性宽度）+ Network Correlation（280px 固定宽度）
-- 小屏幕：两者堆叠，各占全宽
-
-**用途**：用于智能告警分析场景，快速判断网络层是否为业务问题的根本原因，同时最大化 Business Impact 的展示空间。
 
 ---
 
-## 📁 项目结构规范
+## 项目结构
 
 ```
-TrionDesign/
-├── src/
-│   ├── App.tsx              # 主应用组件（989行，待优化）
-│   ├── main.tsx             # 应用入口
-│   ├── index.css            # 全局样式（Tailwind 引入）
-│   ├── components/
-│   │   ├── index.tsx        # 基础组件定义和导出（205行）
-│   │   ├── CorrelationInsight.tsx   # 关联分析组件（39行）
-│   │   └── NetworkAssessment.tsx    # 网络评估组件（64行）
-│   ├── types/
-│   │   ├── index.ts         # 通用类型定义（108行）
-│   │   └── alert.ts         # 告警相关类型（145行）
-│   ├── api/                 # API 服务层
-│   │   ├── alertApi.ts      # 告警 API（70行）
-│   │   ├── metricsApi.ts    # 指标 API（42行）
-│   │   └── dimensionsApi.ts # 维度 API（64行）
-│   ├── hooks/               # 自定义 Hooks
-│   │   ├── useAlertData.ts  # 告警数据获取（148行）
-│   │   └── useTheme.ts      # 主题管理（64行）
-│   ├── mocks/               # MSW Mock 数据
-│   │   ├── browser.ts       # MSW 浏览器配置
-│   │   ├── handlers/
-│   │   │   └── index.ts     # API 请求处理器（103行）
-│   │   └── data/
-│   │       └── scenarios/           # 场景数据
-│   │           ├── index.ts         # 场景管理（128行）
-│   │           ├── app-gc/          # S1: App GC 场景
-│   │           ├── session-table-full/  # S2: 会话表满场景
-│   │           └── pmtud-black-hole/    # S3: PMTUD Black Hole 场景
-│   ├── utils/               # 工具函数
-│   │   ├── correlation.ts   # 关联分析（67行）
-│   │   ├── formatters.ts    # 格式化工具（45行）
-│   │   └── outlierness.ts   # 异常值计算（38行）
-│   └── data/
-│       └── index.ts         # 遗留模拟数据（101行，已被 MSW 替代）
-├── index.html               # HTML 模板
-├── vite.config.ts           # Vite 配置
-├── tailwind.config.js       # Tailwind 配置
-├── tsconfig.json            # TypeScript 配置
-├── postcss.config.js        # PostCSS 配置
-├── package.json             # 依赖管理
-└── docs/                    # 文档目录
-    ├── design-token.md      # 前端开发规范（本文档）
-    └── mock-api-architecture.md  # Mock API 架构文档
+src/
+├── App.tsx              # 主应用（430行）
+├── main.tsx             # 入口（28行）
+├── index.css            # 全局样式
+├── components/          # UI 组件
+│   ├── index.tsx        # 基础组件（181行）
+│   ├── AlertSummaryChart.tsx        # 告警图表（257行）
+│   ├── BusinessImpactSection.tsx    # 业务影响（411行）
+│   ├── NetworkCorrelationSidebar.tsx # 网络侧边栏（446行）
+│   └── [其他组件]       # 工具提示、图例等
+├── types/               # 类型定义
+│   ├── index.ts         # 通用类型（107行）
+│   ├── alert.ts         # 告警类型（147行）
+│   └── networkMetrics.ts # 网络指标类型（32行）
+├── api/                 # API 层
+│   ├── alertApi.ts      # 告警 API
+│   ├── metricsApi.ts    # 指标 API
+│   ├── dimensionsApi.ts # 维度 API
+│   └── request.ts       # 请求工具
+├── hooks/               # 自定义 Hooks
+│   ├── useAlertData.ts  # 数据获取（164行）
+│   ├── useTheme.ts      # 主题管理（64行）
+│   └── useTooltipPosition.ts # 工具提示定位（146行）
+├── config/              # 配置
+│   ├── chartColors.ts   # 图表颜色（16行）
+│   ├── chartConfig.ts   # 图表配置（40行）
+│   └── networkMetricsConfig.ts # 网络指标配置（146行）
+├── utils/               # 工具函数
+│   ├── format.ts        # 格式化（63行）
+│   ├── tableColoring.ts # 表格着色（139行）
+│   └── metricStatusCalculator.ts # 状态计算（80行）
+└── mocks/               # MSW Mock
+    ├── browser.ts       # MSW 配置
+    ├── handlers/index.ts # 请求处理器（103行）
+    └── data/scenarios/  # 场景数据
+        ├── index.ts     # 场景管理（165行）
+        ├── app-gc/      # S1: App GC
+        ├── session-table-full/ # S2: 会话表满
+        └── pmtud-black-hole/   # S3: PMTUD 黑洞
 ```
 
 ### 目录职责
 
-| 目录/文件 | 职责 |
-|----------|------|
-| `src/components/` | 存放可复用的 UI 组件。简单组件（Card、KPI、Table）定义在 `index.tsx`，复杂组件独立文件 |
-| `src/types/` | 存放 TypeScript 类型定义。通用类型在 `index.ts`，领域类型（如 alert.ts）独立文件 |
-| `src/api/` | API 服务层，封装所有后端接口调用（基于 MSW mock） |
-| `src/hooks/` | 自定义 React Hooks，用于状态管理和数据获取 |
-| `src/mocks/` | MSW（Mock Service Worker）配置和模拟数据，支持多场景切换 |
-| `src/utils/` | 工具函数，包括数据处理、格式化、计算等 |
-| `src/data/` | 遗留模拟数据（已被 MSW 替代，保留用于参考） |
-| `src/*.tsx` | 页面级组件或应用入口 |
+| 目录 | 职责 |
+|------|------|
+| `components/` | UI 组件。简单组件在 `index.tsx`，复杂组件独立文件 |
+| `types/` | TypeScript 类型定义 |
+| `api/` | API 服务层（基于 MSW mock） |
+| `hooks/` | 自定义 React Hooks |
+| `config/` | 配置文件（图表、颜色、指标） |
+| `utils/` | 工具函数（格式化、计算、着色） |
+| `mocks/` | MSW 配置和模拟数据 |
 
-### 组件组织策略
+### 组件组织原则
 
-**简单组件（在 `components/index.tsx` 中定义）**：
-- `Card` - 基础卡片容器
-- `SectionHeader` - 区域标题
-- `KPI` - 关键指标展示
-- `Table` - 通用数据表格
-
-**复杂组件（独立文件）**：
-- `CorrelationInsight` - 关联分析洞察（包含复杂逻辑）
-- `NetworkAssessment` - 网络健康评估（包含多层级数据展示）
-- `NetworkCorrelationSidebar` - 网络关联侧边栏（包含状态管理和可展开交互，固定宽度布局）
-
-**原则**：简单的展示型组件集中在 `index.tsx`，包含业务逻辑或超过 50 行的组件独立文件。
+- **简单组件**（< 50 行）→ `components/index.tsx`
+- **复杂组件**（≥ 50 行或有业务逻辑）→ 独立文件
+- **单文件不超过 500 行**（硬性规则）
 
 ---
 
-## 💻 代码规范
+## 代码规范
 
-### 1. 文件组织规范
-- ✅ **单个代码文件不超过 500 行**（项目硬性规则）
-- ✅ 组件、类型、数据严格分离
-- ✅ 使用路径别名 `@/` 引用 `src/` 目录
+### 文件组织
+- **单文件不超过 500 行**（硬性规则）
+- 组件、类型、数据严格分离
+- 使用路径别名 `@/` 引用 `src/`
 
-### 2. TypeScript 规范
+### TypeScript 规范
 
-#### 严格模式配置
+**严格模式**（tsconfig.json）：
 ```json
 {
   "strict": true,
@@ -389,293 +291,230 @@ TrionDesign/
 }
 ```
 
-#### 类型定义要求
-- ✅ 所有组件 Props 必须定义类型接口
-- ✅ 数据模型必须定义类型接口
-- ✅ 使用 `React.FC<Props>` 或 `React.ReactElement` 标注组件类型
-- ✅ 泛型组件使用 `<T extends Record<string, any>>`
+**类型定义要求**：
+- 所有组件 Props 必须定义接口
+- 数据模型必须定义接口
+- 组件使用 `React.FC<Props>` 或 `React.ReactElement`
+- 泛型组件使用 `<T extends Record<string, any>>`
 
-#### 示例
+**示例**：
 ```typescript
-// ✅ 正确：组件 Props 类型定义
+// 组件 Props
 export interface CardProps {
   children: React.ReactNode;
   className?: string;
 }
 
 export const Card: React.FC<CardProps> = ({ children, className = "" }) => (
-  // ...
-);
-
-// ✅ 正确：数据类型定义
-export interface ResponseRateData {
-  t: string;
-  rate: number;
-}
-```
-
-### 3. 命名规范
-
-| 类型 | 规范 | 示例 |
-|------|------|------|
-| 组件文件 | PascalCase | `Card.tsx`, `SectionHeader.tsx` |
-| 组件名称 | PascalCase | `Card`, `KPI`, `SectionHeader` |
-| 类型/接口 | PascalCase + Suffix | `CardProps`, `ResponseRateData` |
-| 变量/函数 | camelCase | `responseRate`, `networkHealth` |
-| 常量 | camelCase | `transType`, `clients` |
-| 路径别名 | `@/` | `@/components`, `@/types` |
-
-### 4. 组件编写规范
-
-#### 函数式组件
-- ✅ 优先使用箭头函数定义组件
-- ✅ 使用解构赋值接收 Props
-- ✅ 默认值在参数中声明
-
-```typescript
-// ✅ 推荐
-export const Card: React.FC<CardProps> = ({ children, className = "" }) => (
-  <div className={`rounded-2xl bg-white/70 ${className}`}>
+  <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 ${className}`}>
     {children}
   </div>
 );
-```
 
-#### 泛型组件
-```typescript
-// ✅ 推荐：Table 组件支持泛型
-export const Table = <T extends Record<string, any>>({ 
-  columns, 
-  data, 
-  keyField 
+// 泛型组件
+export const Table = <T extends Record<string, any>>({
+  columns,
+  data,
+  keyField
 }: TableProps<T>): React.ReactElement => (
   // ...
 );
 ```
 
-### 5. 样式规范
+### 命名规范
 
-#### Tailwind CSS 使用原则
-- ✅ **优先使用 Tailwind 工具类**，避免自定义 CSS
-- ✅ 使用 `dark:` 变体支持深色模式
-- ✅ 复杂样式通过组合工具类实现
-- ✅ 使用模板字符串动态拼接类名
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 组件文件 | PascalCase | `Card.tsx` |
+| 组件名称 | PascalCase | `Card`, `Table` |
+| 类型/接口 | PascalCase | `CardProps`, `ResponseRateData` |
+| 变量/函数 | camelCase | `responseRate`, `formatNumber` |
+| 路径别名 | `@/` | `@/components`, `@/types` |
 
+### 样式规范
+
+**Tailwind CSS 原则**：
+- 优先使用 Tailwind 工具类
+- 所有颜色必须提供 `dark:` 变体
+- 避免自定义 CSS
+- 使用模板字符串动态拼接类名
+
+**常用样式模式**：
 ```typescript
-// ✅ 推荐：动态类名
-<div className={`rounded-2xl bg-white/70 dark:bg-neutral-900/70 ${className}`}>
+// 卡片容器
+className="rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5"
 
-// ✅ 推荐：深色模式
-<div className="bg-neutral-50 dark:bg-neutral-950">
+// 毛玻璃背景
+className="backdrop-blur bg-white/70 dark:bg-neutral-800/80"
 
-// ❌ 不推荐：自定义 CSS
-<div style={{ borderRadius: '16px', background: 'rgba(255,255,255,0.7)' }}>
-```
-
-#### 常用样式模式
-
-**卡片容器**
-```tsx
-className="rounded-2xl bg-white/70 dark:bg-neutral-900/70 backdrop-blur shadow-sm ring-1 ring-black/5"
-```
-
-**毛玻璃背景**
-```tsx
-className="backdrop-blur bg-white/70 dark:bg-neutral-900/60"
-```
-
-**图标容器**
-```tsx
-className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800"
-```
-
-**按钮样式**
-```tsx
 // 主按钮
-className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+className="rounded-xl px-3 py-2 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
 
 // 次按钮
-className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-800"
+className="rounded-xl px-3 py-2 bg-neutral-100 dark:bg-neutral-700"
 ```
 
 ---
 
-## 🎭 动画规范
+## 图表规范
 
-### Framer Motion 使用
+### Recharts 配置
 
-项目使用 **Framer Motion** 实现平滑的动画效果。
+**图表类型**：
+- `LineChart` - 折线图（趋势数据）
+- `AreaChart` - 面积图（多维度对比）
 
-#### 入场动画
+**配置文件**：
+- `src/config/chartConfig.ts` - 图表配置函数
+- `src/config/chartColors.ts` - 颜色常量
+- `src/config/networkMetricsConfig.ts` - 网络指标元数据
+
+**使用示例**：
 ```tsx
-<motion.div 
-  initial={{ scale: 0.9, opacity: 0 }} 
-  animate={{ scale: 1, opacity: 1 }}
->
-  {/* 内容 */}
-</motion.div>
-```
+import { getCartesianGridConfig, getTooltipContentStyle } from '@/config/chartConfig';
 
-#### 动画原则
-- ✅ 仅在关键元素使用动画（如图标、卡片入场）
-- ✅ 避免过度动画影响性能
-- ✅ 动画时长保持在 200-500ms
-- ✅ 使用自然缓动曲线
-
----
-
-## 📊 图表规范
-
-### Recharts 使用
-
-项目使用 **Recharts** 进行数据可视化。
-
-#### 图表类型
-- **LineChart** - 折线图（用于趋势数据）
-- **AreaChart** - 面积图（用于多维度对比）
-
-#### 配置规范
-
-**通用配置**
-```tsx
 <ResponsiveContainer width="100%" height="100%">
   <LineChart data={data} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
-    <CartesianGrid strokeDasharray="3 3" />
+    <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
     <XAxis dataKey="t" />
     <YAxis />
-    <Tooltip />
+    <Tooltip contentStyle={getTooltipContentStyle(resolvedTheme)} />
     <Legend />
-    {/* 图表内容 */}
   </LineChart>
 </ResponsiveContainer>
 ```
 
-**图表容器**
-```tsx
-<div className="h-80 p-4">
-  <ResponsiveContainer width="100%" height="100%">
-    {/* 图表 */}
-  </ResponsiveContainer>
-</div>
-```
-
-#### 图表元素
-- **网格**：`strokeDasharray="3 3"` 虚线网格
-- **数据线**：`strokeWidth={2}` 线宽、`dot={false}` 隐藏数据点
-- **参考线**：用于标记关键时间点或阈值
-- **参考区域**：用于标记异常时间段
-
----
-
-## 📦 构建与部署
-
-### Vite 配置
-
-#### 路径别名
+**图表颜色**（`CHART_COLORS`）：
 ```typescript
-resolve: {
-  alias: {
-    '@': path.resolve(__dirname, './src'),
-  },
+{
+  blue: '#3b82f6',
+  purple: '#a855f7',
+  cyan: '#06b6d4',
+  amber: '#f59e0b',
+  pink: '#ec4899',
+  indigo: '#6366f1',
+  packetLoss: '#ef4444',
+  retransmission: '#f97316',
+  duplicateAck: '#eab308',
+  tcpSetupSuccess: '#60a5fa',
+  tcpRst: '#fb923c',
 }
 ```
 
-#### 开发命令
+---
+
+## 工具函数
+
+### 格式化工具（`src/utils/format.ts`）
+
+**`formatNumber(value: number): string`**
+- 智能格式化小数位数
+- 规则：整数位 ≥3 不保留小数，=2 保留1位，=1 保留2位
+
+**`formatDate(dateString: string): string`**
+- 格式化日期为 "Oct 29" 格式
+
+### 表格着色（`src/utils/tableColoring.ts`）
+
+**`isOutlier(value: number, allValues: number[]): boolean`**
+- 基于统计学检测离群值
+- 绝对阈值：≥15%
+- 相对条件：Z-score、倍数、占比（满足2/3）
+
+**`getRowColorClass(value: number, allValues: number[]): string`**
+- 返回：`bg-amber-300 dark:bg-amber-300 text-neutral-900` 或空
+
+**`findOutliers<T>(data: T[], key: keyof T): T[]`**
+- 找出数据中的离群值项
+
+### 指标状态计算（`src/utils/metricStatusCalculator.ts`）
+
+**`calculateMetricStatus(value: number, threshold: MetricThreshold): MetricStatus`**
+- 计算指标状态（normal/warning/critical）
+- 支持正向和反向指标
+
+---
+
+## 构建配置
+
+### Vite 配置（vite.config.ts）
+
+```typescript
+{
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') }
+  },
+  server: {
+    warmup: { clientFiles: ['./src/App.tsx', './src/main.tsx'] }
+  },
+  optimizeDeps: {
+    include: ['recharts', 'framer-motion']
+  }
+}
+```
+
+### 开发命令
+
 ```bash
 npm run dev      # 启动开发服务器
 npm run build    # 生产构建
 npm run preview  # 预览构建结果
 ```
 
-### TypeScript 配置要点
-- **目标版本**：ES2020
-- **模块解析**：bundler 模式
-- **JSX**：react-jsx（新版 JSX 转换）
-- **严格模式**：启用所有严格检查
+---
+
+## 最佳实践
+
+### 性能优化
+- 图表数据使用 `useMemo` 缓存
+- 避免内联函数作为 Props
+
+### 可访问性
+- 使用语义化 HTML 标签
+- 表格使用 `<table>` 结构
+- 按钮使用 `<button>` 而非 `<div>`
+
+### 响应式设计
+- 使用 Tailwind 断点（`md:`, `lg:`, `xl:`）
+- 容器使用 `w-full`
+- 表格添加 `overflow-x-auto`
+
+### 深色模式
+- 所有颜色必须提供 `dark:` 变体
+- 测试两种模式的对比度
+- 避免硬编码颜色值
 
 ---
 
-## 🎯 最佳实践
+## 开发工作流
 
-### 1. 性能优化
-- ✅ 图表数据使用 `useMemo` 缓存
-- ✅ 大数据列表使用虚拟滚动
-- ✅ 图片使用懒加载
-- ✅ 避免内联函数作为 Props
+### 新增组件
+1. 在 `src/components/` 创建组件文件
+2. 在 `src/types/` 定义 Props 类型
+3. 在 `src/components/index.tsx` 导出
+4. 在页面中引入使用
 
-### 2. 可访问性（a11y）
-- ✅ 使用语义化 HTML 标签
-- ✅ 图标组件设置合适的尺寸和颜色对比度
-- ✅ 表格使用 `<table>` 语义化结构
-- ✅ 按钮使用 `<button>` 而非 `<div>`
-
-### 3. 响应式设计
-- ✅ 使用 Tailwind 响应式断点（`md:`, `lg:`）
-- ✅ 容器使用 `w-full` 保证宽度适配
-- ✅ 表格添加横向滚动 `overflow-x-auto`
-
-### 4. 深色模式
-- ✅ 所有颜色类都需提供 `dark:` 变体
-- ✅ 测试两种模式下的对比度
-- ✅ 避免硬编码颜色值
+### 新增 API
+1. 在 `src/api/` 创建 API 文件
+2. 在 `src/types/` 定义数据类型
+3. 在 `src/mocks/handlers/` 添加 mock 处理器
+4. 在组件中调用 API
 
 ---
 
-## 🔧 开发工作流
+## 参考资源
 
-### 1. 新增组件
-```bash
-# 1. 在 src/components/ 创建组件
-# 2. 在 src/types/index.ts 定义 Props 类型
-# 3. 在 src/components/index.tsx 导出组件
-# 4. 在页面中引入使用
-```
-
-### 2. 新增数据模型
-```bash
-# 1. 在 src/types/index.ts 定义数据类型
-# 2. 在 src/data/index.ts 创建模拟数据
-# 3. 在组件中引入使用
-```
-
-### 3. 代码检查
-- TypeScript 严格模式会自动检查类型错误
-- Vite 会在开发时报告编译错误
-- 确保无 Console 警告和错误
-
----
-
-## 📚 参考资源
-
-### 官方文档
-- [React 官方文档](https://react.dev/)
-- [TypeScript 官方文档](https://www.typescriptlang.org/)
-- [Vite 官方文档](https://vitejs.dev/)
-- [Tailwind CSS 文档](https://tailwindcss.com/)
-- [Framer Motion 文档](https://www.framer.com/motion/)
-- [Recharts 文档](https://recharts.org/)
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Framer Motion](https://www.framer.com/motion/)
+- [Recharts](https://recharts.org/)
 - [Lucide Icons](https://lucide.dev/)
 
-### 设计资源
-- [Tailwind UI Components](https://tailwindui.com/)
-- [Shadcn UI](https://ui.shadcn.com/)
-- [Glassmorphism Generator](https://hype4.academy/tools/glassmorphism-generator)
-
 ---
 
-## 📝 版本历史
-
-| 版本 | 日期 | 说明 |
-|------|------|------|
-| v1.0 | 2025-10-24 | 初始版本，完整规范文档 |
-
----
-
-## 👥 维护者
-
-本文档由项目团队维护，如有疑问或建议，请联系项目负责人。
-
----
-
-**最后更新时间**：2025年10月24日
+**文档版本**：v2.0
+**最后更新**：2025-11-05
+**适用对象**：AI Agent 开发维护
 
