@@ -53,7 +53,7 @@ export function formatNumber(value: number): string {
 export function formatDate(dateString: string): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  const [year, month, day] = dateString.split('-');
+  const [, month, day] = dateString.split('-');
   const monthIndex = parseInt(month, 10) - 1;
   const dayNumber = parseInt(day, 10);
 

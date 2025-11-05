@@ -26,7 +26,7 @@ export const getStatusMessage = (
   metricName: string,
   unit: string = '%'
 ): string => {
-  const { warning, critical, reverse = false } = threshold;
+  const { warning, reverse = false } = threshold;
 
   if (status === 'normal') {
     return `Normal - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;

@@ -16,7 +16,7 @@ export const defaultAlertMetadata: AlertMetadata = {
   condition: {
     metric: "Success Rate",
     operator: "<",
-    threshold: "90",
+    threshold: 90,
     unit: "%"
   },
   duration: {

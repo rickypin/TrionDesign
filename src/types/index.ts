@@ -52,6 +52,7 @@ export interface ChannelData {
   time: number;
   succ: number;
   impact: number;
+  outlierness?: number;
 }
 
 export interface ServerData {

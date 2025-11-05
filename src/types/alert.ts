@@ -11,8 +11,8 @@ export type MetricType = 'responseRate' | 'transactionCount' | 'avgResponseTime'
 export interface AlertCondition {
   metric: string;           // e.g., "Response Rate"
   operator: '<' | '>' | '=' | '<=' | '>=';
-  threshold: number;        // e.g., 85
-  unit: '%' | 'ms' | 'count' | '/m' | '';
+  threshold: number | '';   // e.g., 85, or empty string for baseline comparison
+  unit: '%' | 'ms' | 'count' | '/m' | '' | 'Baseline';
 }
 
 export interface AlertDuration {

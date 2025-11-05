@@ -288,13 +288,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                     }}
                   />
                   <Legend
-                    content={
-                      <CustomLegendWithInfo
-                        chartType="tcp"
-                        data={tcpHealth}
-                        alertMetadata={alertMetadata}
-                      />
-                    }
+                    content={<CustomLegendWithInfo />}
                   />
                   <ReferenceArea
                     yAxisId="left"
@@ -366,13 +360,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                     }}
                   />
                   <Legend
-                    content={
-                      <CustomLegendWithInfo
-                        chartType="network"
-                        data={networkHealth}
-                        alertMetadata={alertMetadata}
-                      />
-                    }
+                    content={<CustomLegendWithInfo />}
                   />
                   <ReferenceArea
                     x1={alertMetadata.duration.start}
