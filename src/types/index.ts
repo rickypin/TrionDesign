@@ -84,21 +84,6 @@ export interface CardProps {
   className?: string;
 }
 
-export interface SectionHeaderProps {
-  icon?: LucideIcon;
-  title: string | React.ReactNode;
-  subtitle?: string;
-  right?: React.ReactNode;
-  iconColor?: 'red' | 'blue' | 'green' | 'neutral';
-}
-
-export interface KPIProps {
-  label: string;
-  value: string;
-  trend?: string;
-  icon: LucideIcon;
-}
-
 export interface TableColumn<T> {
   key: keyof T;
   title: string;

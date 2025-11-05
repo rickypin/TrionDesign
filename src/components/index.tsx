@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import type { CardProps, SectionHeaderProps, KPIProps, TableProps } from "@/types";
+import type { CardProps, TableProps } from "@/types";
 import { getRowColorClass, shouldBold as shouldBoldValue } from "@/utils/tableColoring";
 
-export { NetworkAssessment } from "./NetworkAssessment";
-export { NetworkCorrelationCompact } from "./NetworkCorrelationCompact";
 export { NetworkCorrelationSidebar } from "./NetworkCorrelationSidebar";
 export { MetricInfoTooltip } from "./MetricInfoTooltip";
 export { CustomLegendWithInfo } from "./CustomLegendWithInfo";
@@ -19,73 +17,6 @@ export const Card: React.FC<CardProps> = ({ children, className = "" }): React.R
   <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5 ${className}`}>
     {children}
   </div>
-);
-
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title, subtitle, right, iconColor = 'neutral' }): React.ReactElement => {
-  // 为AlertTriangle图标自动使用红色主题
-  const isAlertTriangle = Icon && (Icon.displayName === 'AlertTriangle' || Icon.name === 'AlertTriangle');
-  const effectiveColor = isAlertTriangle ? 'red' : iconColor;
-
-  const getIconStyles = () => {
-    switch (effectiveColor) {
-      case 'red':
-        return {
-          container: 'bg-red-100 dark:bg-red-900/50',
-          icon: 'text-red-600 dark:text-red-300'
-        };
-      case 'blue':
-        return {
-          container: 'bg-blue-100 dark:bg-blue-900/50',
-          icon: 'text-blue-600 dark:text-blue-300'
-        };
-      case 'green':
-        return {
-          container: 'bg-green-100 dark:bg-green-900/50',
-          icon: 'text-green-600 dark:text-green-300'
-        };
-      default:
-        return {
-          container: 'bg-neutral-100 dark:bg-neutral-700',
-          icon: ''
-        };
-    }
-  };
-
-  const styles = getIconStyles();
-
-  return (
-    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-neutral-200/70 dark:border-neutral-700">
-      <div className="flex items-center gap-2">
-        {Icon && (
-          <div className={`p-1.5 rounded-xl ${styles.container}`}>
-            <Icon className={`h-4 w-4 ${styles.icon}`} />
-          </div>
-        )}
-        <div>
-          <h3 className="text-base font-semibold leading-tight">
-            {typeof title === 'string' ? title : title}
-          </h3>
-          {subtitle && <p className="text-xs text-neutral-500 mt-0.5">{subtitle}</p>}
-        </div>
-      </div>
-      {right}
-    </div>
-  );
-};
-
-export const KPI: React.FC<KPIProps> = ({ label, value, trend, icon: Icon }): React.ReactElement => (
-  <Card>
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</p>
-        <Icon className="h-4 w-4 text-neutral-400" />
-      </div>
-      <div className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">{value}</div>
-      {typeof trend === "string" ? (
-        <div className="mt-1.5 text-xs text-neutral-500">{trend}</div>
-      ) : null}
-    </div>
-  </Card>
 );
 
 export const Table = <T extends Record<string, any>>({
@@ -178,7 +109,7 @@ export const Table = <T extends Record<string, any>>({
 
   // 智能列宽分配：根据列的内容类型分配不同的宽度
   // 30% + 26% + 30% + 14% = 100%
-  const getColumnWidth = (index: number, columnKey: string) => {
+  const getColumnWidth = (index: number, columnKey: keyof T) => {
     if (index === 0) return '30%'; // 第一列（名称）
 
     // 根据列的 key 判断内容类型
@@ -223,7 +154,7 @@ export const Table = <T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody>
-            {sortedData.map((row, rowIndex) => {
+            {sortedData.map((row) => {
               const isBold = colorColumn && shouldBold(row[colorColumn] as number);
               return (
                 <tr
