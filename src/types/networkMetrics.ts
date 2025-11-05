@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 export type MetricKey = 'packetLoss' | 'retransmission' | 'duplicateAck' | 'tcpSetup' | 'tcpRst';
 
 export type MetricStatus = 'normal' | 'warning' | 'critical';
@@ -12,7 +14,7 @@ export interface MetricInfo {
   key: MetricKey;
   name: string;
   nameEn: string;
-  icon: string;
+  icon: LucideIcon;
   definition: string;
   explanation: string;
   impact: string[];

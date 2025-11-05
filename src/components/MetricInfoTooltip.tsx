@@ -2,65 +2,82 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, X } from 'lucide-react';
 import { NETWORK_METRICS_CONFIG } from '@/config/networkMetricsConfig';
-import { getMetricStatusResult } from '@/utils/metricStatusCalculator';
-import type { MetricKey, MetricStatusResult } from '@/types/networkMetrics';
+import type { MetricKey } from '@/types/networkMetrics';
 
 interface MetricInfoTooltipProps {
   metricKey: MetricKey;
-  currentValue?: number;
-  unit?: string;
 }
 
 export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
   metricKey,
-  currentValue,
-  unit = '%',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const iconRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  
+
   const metricInfo = NETWORK_METRICS_CONFIG[metricKey];
-  
+
   if (!metricInfo) return null;
-  
-  // Calculate status if current value is provided
-  const statusResult: MetricStatusResult | null = currentValue !== undefined
-    ? getMetricStatusResult(currentValue, metricInfo.threshold, metricInfo.nameEn, unit)
-    : null;
   
   // Calculate position when opening
   useEffect(() => {
     if (isOpen && iconRef.current) {
-      const rect = iconRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      const calculatePosition = () => {
+        if (!iconRef.current || !tooltipRef.current) return;
 
-      const tooltipWidth = 480; // Increased width to avoid text wrapping
-      const tooltipHeight = 500; // Estimated max height
-      const gap = 12;
+        const rect = iconRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
 
-      let top = rect.top;
-      let left = rect.right + gap;
+        const tooltipWidth = 420;
+        const gap = 8;
 
-      // Check if tooltip would overflow right edge
-      if (left + tooltipWidth > viewportWidth - 16) {
-        // Position to the left of icon
-        left = rect.left - tooltipWidth - gap;
-      }
+        // Get actual tooltip height after render
+        const tooltipHeight = tooltipRef.current.offsetHeight;
 
-      // Check if tooltip would overflow bottom edge
-      if (top + tooltipHeight > viewportHeight - 16) {
-        top = Math.max(16, viewportHeight - tooltipHeight - 16);
-      }
+        let top: number;
+        let left = rect.left;
 
-      // Ensure minimum top padding
-      if (top < 16) {
-        top = 16;
-      }
+        // Check if tooltip would overflow right edge
+        if (left + tooltipWidth > viewportWidth - 16) {
+          // Align to the right edge instead
+          left = Math.max(16, viewportWidth - tooltipWidth - 16);
+        }
 
-      setPosition({ top, left });
+        // Determine vertical position
+        const spaceBelow = viewportHeight - rect.bottom - 16;
+        const spaceAbove = rect.top - 16;
+
+        // Check if tooltip fits below
+        if (spaceBelow >= tooltipHeight + gap) {
+          // Enough space below - position below the icon
+          top = rect.bottom + gap;
+        } else if (spaceAbove >= tooltipHeight + gap) {
+          // Not enough space below but enough above - position above the icon
+          top = rect.top - tooltipHeight - gap;
+        } else {
+          // Not enough space in either direction - choose the side with more space
+          if (spaceBelow >= spaceAbove) {
+            // More space below - position below but adjust to fit
+            top = Math.max(rect.bottom + gap, viewportHeight - tooltipHeight - 16);
+          } else {
+            // More space above - position above the icon
+            top = rect.top - tooltipHeight - gap;
+            // Ensure it doesn't go above viewport
+            if (top < 16) {
+              top = 16;
+            }
+          }
+        }
+
+        setPosition({ top, left });
+      };
+
+      // Calculate position after a short delay to ensure tooltip is rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(calculatePosition);
+      });
     }
   }, [isOpen]);
   
@@ -104,18 +121,7 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
     };
   }, [isOpen]);
   
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'normal':
-        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/25';
-      case 'warning':
-        return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/25';
-      case 'critical':
-        return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/25';
-      default:
-        return '';
-    }
-  };
+
   
   return (
     <>
@@ -137,7 +143,7 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
       {isOpen && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed z-[9999] w-[480px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg shadow-xl transition-opacity duration-150"
+          className="fixed z-[9999] w-[420px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg shadow-xl transition-opacity duration-150"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
@@ -147,7 +153,9 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
             <div className="flex items-center gap-2">
-              <span className="text-lg">{metricInfo.icon}</span>
+              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                <metricInfo.icon className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+              </div>
               <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                 {metricInfo.nameEn}
               </h4>
@@ -162,27 +170,19 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
           </div>
           
           {/* Content */}
-          <div className="px-4 py-3 space-y-2.5 text-xs">
+          <div className="px-4 py-3 space-y-4 text-xs">
             {/* Definition */}
             <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Definition</h5>
+              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 text-[11px] uppercase tracking-wide">Definition</h5>
               <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
                 {metricInfo.definition}
               </p>
             </div>
 
-            {/* Explanation */}
-            <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Explanation</h5>
-              <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
-                {metricInfo.explanation}
-              </p>
-            </div>
-
             {/* Impact */}
             <div>
-              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Impact on Transactions</h5>
-              <ul className="space-y-0.5">
+              <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 text-[11px] uppercase tracking-wide">Impact on Transactions</h5>
+              <ul className="space-y-1">
                 {metricInfo.impact.map((item, index) => (
                   <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-snug">
                     • {item}
@@ -191,38 +191,7 @@ export const MetricInfoTooltip: React.FC<MetricInfoTooltipProps> = ({
               </ul>
             </div>
 
-            {/* Current Status */}
-            {statusResult && (
-              <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Current Status</h5>
-                <div className={`px-3 py-1.5 rounded-md ${getStatusColor(statusResult.status)}`}>
-                  <p className="font-medium leading-snug">
-                    {statusResult.message}
-                  </p>
-                </div>
-              </div>
-            )}
 
-            {/* Possible Causes or Normal Message */}
-            {statusResult && statusResult.status !== 'normal' ? (
-              <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Possible Causes</h5>
-                <ul className="space-y-0.5">
-                  {metricInfo.possibleCauses.map((cause, index) => (
-                    <li key={index} className="text-neutral-700 dark:text-neutral-300 leading-snug">
-                      • {cause}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : statusResult && metricInfo.normalMessage && (
-              <div>
-                <h5 className="font-semibold text-neutral-600 dark:text-neutral-400 mb-1 text-[11px] uppercase tracking-wide">Maintaining Good Performance</h5>
-                <p className="text-neutral-700 dark:text-neutral-300 leading-snug">
-                  {metricInfo.normalMessage}
-                </p>
-              </div>
-            )}
           </div>
         </div>,
         document.body

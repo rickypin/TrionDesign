@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
-import { Minimize2, Maximize2 } from 'lucide-react';
+import { Minimize2, Maximize2, AlertTriangle } from 'lucide-react';
 import { CustomLegendWithInfo } from './CustomLegendWithInfo';
+import { NetworkLayerTooltip } from './NetworkLayerTooltip';
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
 
@@ -20,6 +21,7 @@ interface NetworkCorrelationSidebarProps {
   getReferenceAreaColor: (type: string) => string;
   getReferenceLineColor: (type: string) => { light: string; dark: string };
   onExpandChange?: (expanded: boolean) => void;
+  serverIps?: string[];
 }
 
 export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps> = ({
@@ -34,6 +36,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   getReferenceAreaColor,
   getReferenceLineColor,
   onExpandChange,
+  serverIps = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
@@ -94,12 +97,12 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   const getInterpretationText = () => {
     if (activeChart === 'tcp') {
       if (details.availability === 'error') {
-        return 'TCP Setup Failure leads to decreased transaction volume; TCP RST causes reduced transaction response rate';
+        return 'TCP setup success rate dropped ~10 percentage points below normal, closely aligned with transaction volume decline';
       }
       return 'TCP connection establishment is stable with no impact on transaction metrics';
     } else {
       if (details.performance === 'error') {
-        return 'Packet Loss, Retransmission and Duplicate ACK cause degraded transaction response time and response rate';
+        return 'Retransmission and Duplicate ACK rise in tandem, indicating packet loss on the network path, closely aligned with declining transaction response rate';
       }
       return 'Network performance metrics are healthy with no impact on transaction metrics';
     }
@@ -125,13 +128,19 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
           </div>
           <div className="px-4 py-3">
             <div
-              className={`w-full py-2 rounded-md text-center text-xs font-bold ${
+              className={`inline-flex items-center justify-center w-full px-2.5 py-1 rounded-md ${
                 isHealthy
-                  ? 'bg-green-600 text-white'
-                  : 'bg-amber-300 text-amber-900 dark:bg-amber-500 dark:text-amber-950'
+                  ? 'bg-green-600 dark:bg-green-600'
+                  : 'bg-amber-300 dark:bg-amber-300'
               }`}
             >
-              {statusInfo.badge}
+              <span className={`text-sm font-semibold ${
+                isHealthy
+                  ? 'text-white dark:text-white'
+                  : 'text-neutral-900 dark:text-neutral-900'
+              }`}>
+                {statusInfo.badge}
+              </span>
             </div>
           </div>
         </>
@@ -325,7 +334,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                     stroke={CHART_COLORS.indigo}
                     strokeWidth={2.5}
                     dot={false}
-                    name="TCP Setup Success %"
+                    name="TCP Setup Success Rate"
                   />
                   <Line
                     yAxisId="right"
@@ -439,8 +448,21 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                 ? 'bg-amber-50/60 dark:bg-amber-800/35'
                 : 'bg-blue-50/60 dark:bg-blue-900/25'
             }`}>
-              <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 text-center">
-                {getInterpretationText()}
+              <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 text-center flex items-center justify-center gap-2 flex-wrap">
+                {((activeChart === 'tcp' && details.availability === 'error') ||
+                  (activeChart === 'network' && details.performance === 'error')) && (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                )}
+                <span>{getInterpretationText()}</span>
+                {((activeChart === 'tcp' && details.availability === 'error') ||
+                  (activeChart === 'network' && details.performance === 'error')) && (
+                  <>
+                    <span className="text-neutral-500 dark:text-neutral-400">·</span>
+                    <NetworkLayerTooltip serverIps={serverIps} componentName={alertMetadata.component}>
+                      Investigate in network layer
+                    </NetworkLayerTooltip>
+                  </>
+                )}
               </p>
             </div>
           </div>

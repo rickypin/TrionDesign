@@ -286,7 +286,7 @@ export const NetworkCorrelationCompact: React.FC<NetworkCorrelationCompactProps>
                         strokeOpacity={0.7}
                       />
                     )}
-                    <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success %" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="setup" name="TCP Setup Success Rate" stroke={CHART_COLORS.indigo} dot={false} strokeWidth={2} />
                     <Line yAxisId="right" type="monotone" dataKey="rst" name="TCP RST" stroke={CHART_COLORS.pink} dot={false} strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>

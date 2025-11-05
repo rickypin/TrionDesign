@@ -9,6 +9,7 @@ export { NetworkCorrelationSidebar } from "./NetworkCorrelationSidebar";
 export { MetricInfoTooltip } from "./MetricInfoTooltip";
 export { CustomLegendWithInfo } from "./CustomLegendWithInfo";
 export { IPTooltip } from "./IPTooltip";
+export { NetworkLayerTooltip } from "./NetworkLayerTooltip";
 export { CustomReferenceLabel } from "./CustomReferenceLabel";
 export { BusinessImpactSection } from "./BusinessImpactSection";
 export { AlertSummaryChart } from "./AlertSummaryChart";

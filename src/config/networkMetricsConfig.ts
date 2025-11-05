@@ -1,3 +1,4 @@
+import { TrendingDown, RefreshCw, Repeat2, Link, Zap } from 'lucide-react';
 import type { MetricInfo, MetricKey } from '@/types/networkMetrics';
 
 export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
@@ -5,7 +6,7 @@ export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
     key: 'packetLoss',
     name: '丢包率',
     nameEn: 'Packet Loss',
-    icon: '📉',
+    icon: TrendingDown,
     definition: 'The percentage of data packets lost during network transmission',
     explanation: 'Like packages getting lost during delivery and needing to be resent. Higher packet loss means less reliable data transmission.',
     impact: [
@@ -30,7 +31,7 @@ export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
     key: 'retransmission',
     name: '重传率',
     nameEn: 'Retransmission',
-    icon: '🔄',
+    icon: RefreshCw,
     definition: 'The percentage of data retransmitted after TCP protocol detects data loss',
     explanation: 'Like repeating yourself when someone didn\'t hear you clearly on a phone call. High retransmission rate indicates poor network quality requiring frequent data resending.',
     impact: [
@@ -55,7 +56,7 @@ export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
     key: 'duplicateAck',
     name: '重复确认',
     nameEn: 'Duplicate ACK',
-    icon: '🔁',
+    icon: Repeat2,
     definition: 'Receiver repeatedly sends acknowledgment signals indicating expected packets have not arrived',
     explanation: 'Like waiting for a package and the delivery person brings the wrong one, you keep saying "this is not what I ordered". High duplicate ACKs indicate packets arriving out of order.',
     impact: [
@@ -80,7 +81,7 @@ export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
     key: 'tcpSetup',
     name: 'TCP 建连成功率',
     nameEn: 'TCP Setup Success',
-    icon: '🔗',
+    icon: Link,
     definition: 'The percentage of successful TCP three-way handshake connections',
     explanation: 'Like whether a phone call can connect. Low connection success rate means many "calls" fail to connect, transactions cannot start.',
     impact: [
@@ -106,7 +107,7 @@ export const NETWORK_METRICS_CONFIG: Record<string, MetricInfo> = {
     key: 'tcpRst',
     name: 'TCP 连接重置',
     nameEn: 'TCP RST',
-    icon: '⚡',
+    icon: Zap,
     definition: 'The number of times TCP connections are forcibly terminated',
     explanation: 'Like a phone call suddenly being hung up. High RST count indicates connections are frequently interrupted abnormally, transactions cannot complete.',
     impact: [

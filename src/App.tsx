@@ -415,6 +415,7 @@ export default function App(): React.ReactElement {
               getReferenceAreaColor={getReferenceAreaColor}
               getReferenceLineColor={getReferenceLineColor}
               onExpandChange={setIsNetworkExpanded}
+              serverIps={servers.map(s => s.ip)}
             />
           </Card>
         </div>

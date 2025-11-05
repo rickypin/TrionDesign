@@ -29,11 +29,11 @@ export const getStatusMessage = (
   const { warning, critical, reverse = false } = threshold;
 
   if (status === 'normal') {
-    return `✅ Normal - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
+    return `Normal - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   } else if (status === 'warning') {
-    return `⚠️ Minor Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
+    return `Minor Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   } else {
-    return `🔴 Severe Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
+    return `Severe Impact - ${metricName} ${value}${unit} (Normal ${reverse ? '≥' : '<'}${warning}${unit})`;
   }
 };
 
