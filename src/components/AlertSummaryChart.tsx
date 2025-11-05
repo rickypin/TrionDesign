@@ -22,6 +22,7 @@ import {
 import { Card, CustomReferenceLabel } from '@/components';
 import { formatDate } from '@/utils/format';
 import { CHART_COLORS } from '@/config/chartColors';
+import { getCartesianGridConfig, getTooltipContentStyle } from '@/config/chartConfig';
 import type { ResponseRateData } from '@/types';
 import type { AlertMetadata } from '@/types/alert';
 
@@ -90,11 +91,7 @@ export const AlertSummaryChart: React.FC<AlertSummaryChartProps> = ({
         <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={responseRate} margin={{ left: 8, right: 8, top: 32, bottom: 8 }} syncId="timeSeriesSync">
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-              />
+              <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
               <XAxis dataKey="t" />
               <YAxis domain={chartConfig.yAxisDomain} tickFormatter={chartConfig.yAxisTickFormatter} />
               <Tooltip
@@ -113,12 +110,7 @@ export const AlertSummaryChart: React.FC<AlertSummaryChartProps> = ({
                   }
                   return chartConfig.tooltipFormatter(value);
                 }}
-                contentStyle={{
-                  backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                  border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                  borderRadius: '8px',
-                  color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
-                }}
+                contentStyle={getTooltipContentStyle(resolvedTheme)}
                 labelStyle={{
                   color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                 }}

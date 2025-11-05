@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { BarChart3, Activity, Server, Globe } from 'lucide-react';
-import { Card, Table, IPTooltip } from '@/components';
+import { Card, Table, IPTooltip, TableSectionHeader } from '@/components';
 import { formatNumber } from '@/utils/format';
 import type {
   TransTypeData,
@@ -156,12 +156,7 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
           {/* Channel Table - Only show if channel dimension is enabled */}
           {dimensionConfig?.dimensions.find(d => d.id === 'channel')?.enabled && channels.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                  <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-                </div>
-                <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Channel</h4>
-              </div>
+              <TableSectionHeader icon={BarChart3} title="Channel" />
               <Table
                 keyField="channel"
                 colorColumn="impact"
@@ -208,12 +203,7 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
 
           {/* Trans Type Table */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-              <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-              </div>
-              <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Trans Type</h4>
-            </div>
+            <TableSectionHeader icon={BarChart3} title="Trans Type" />
             <Table
               keyField="type"
               colorColumn="impact"
@@ -259,12 +249,7 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
 
           {/* Return Code Table */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-              <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                <Activity className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-              </div>
-              <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Return Code</h4>
-            </div>
+            <TableSectionHeader icon={Activity} title="Return Code" />
             <Table
               keyField="code"
               colorColumn="impact"
@@ -315,12 +300,7 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
 
           {/* Server IP Table */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-              <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-              </div>
-              <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Server IP</h4>
-            </div>
+            <TableSectionHeader icon={Server} title="Server IP" />
             <Table
               keyField="ip"
               colorColumn="impact"
@@ -372,12 +352,7 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
 
           {/* Client IP Table */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-              <div className="p-1 rounded-md bg-neutral-100 dark:bg-neutral-600">
-                <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-              </div>
-              <h4 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Client IP</h4>
-            </div>
+            <TableSectionHeader icon={Globe} title="Client IP" />
             <Table
               keyField="ip"
               colorColumn="impact"

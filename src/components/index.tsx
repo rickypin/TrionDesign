@@ -13,6 +13,7 @@ export { NetworkLayerTooltip } from "./NetworkLayerTooltip";
 export { CustomReferenceLabel } from "./CustomReferenceLabel";
 export { BusinessImpactSection } from "./BusinessImpactSection";
 export { AlertSummaryChart } from "./AlertSummaryChart";
+export { TableSectionHeader } from "./TableSectionHeader";
 
 export const Card: React.FC<CardProps> = ({ children, className = "" }): React.ReactElement => (
   <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5 ${className}`}>

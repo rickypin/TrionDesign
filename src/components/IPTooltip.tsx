@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
+import { useTooltipPosition } from "@/hooks/useTooltipPosition";
 
 interface IPTooltipProps {
   ip: string;
@@ -7,83 +8,15 @@ interface IPTooltipProps {
 }
 
 export const IPTooltip: React.FC<IPTooltipProps> = ({ ip, children }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const hideTimer = useRef<number | null>(null);
-  const spanRef = useRef<HTMLSpanElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimer.current) {
-        window.clearTimeout(hideTimer.current);
-      }
-    };
-  }, []);
-
-  const openTooltip = () => {
-    if (spanRef.current) {
-      const rect = spanRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Estimated tooltip dimensions
-      const tooltipWidth = 280;
-      const tooltipHeight = 180;
-      const gap = 4; // Smaller gap for closer positioning
-
-      let top = rect.bottom + gap;
-      let left = rect.left;
-
-      // Horizontal positioning with boundary detection
-      if (left + tooltipWidth > viewportWidth - 16) {
-        // Align to right edge of trigger element
-        left = rect.right - tooltipWidth;
-      }
-
-      // Ensure minimum left padding
-      if (left < 16) {
-        left = 16;
-      }
-
-      // Vertical positioning - prefer below, but check if space available
-      const spaceBelow = viewportHeight - rect.bottom;
-      const spaceAbove = rect.top;
-
-      if (spaceBelow < tooltipHeight + gap + 16 && spaceAbove > spaceBelow) {
-        // Not enough space below and more space above - position above
-        top = rect.top - tooltipHeight - gap;
-      } else {
-        // Default: position below
-        top = rect.bottom + gap;
-      }
-
-      // Final boundary check
-      if (top < 16) {
-        top = 16;
-      } else if (top + tooltipHeight > viewportHeight - 16) {
-        top = viewportHeight - tooltipHeight - 16;
-      }
-
-      setPosition({ top, left });
-    }
-    if (hideTimer.current) {
-      window.clearTimeout(hideTimer.current);
-      hideTimer.current = null;
-    }
-    setShowTooltip(true);
-  };
-
-  const scheduleClose = () => {
-    if (hideTimer.current) window.clearTimeout(hideTimer.current);
-    hideTimer.current = window.setTimeout(() => setShowTooltip(false), 150);
-  };
+  const { showTooltip, position, triggerRef, tooltipRef, openTooltip, scheduleClose } = useTooltipPosition({
+    tooltipDimensions: { width: 280, height: 180 },
+    gap: 4,
+  });
 
   return (
     <>
       <span
-        ref={spanRef}
+        ref={triggerRef as React.RefObject<HTMLSpanElement>}
         className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer underline underline-offset-2"
         onMouseEnter={openTooltip}
         onMouseLeave={scheduleClose}

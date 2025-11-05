@@ -14,11 +14,13 @@ import {
   ReferenceArea,
   ReferenceLine,
 } from "recharts";
-import type { NetworkHealthData, TCPHealthData, AlertMetadata } from "@/types";
+import { getCartesianGridConfig, getTooltipContentStyle } from '@/config/chartConfig';
+import type { NetworkHealthData, TcpHealthData } from "@/types";
+import type { AlertMetadata } from "@/types/alert";
 
 interface NetworkCorrelationCompactProps {
   networkHealth: NetworkHealthData[];
-  tcpHealth: TCPHealthData[];
+  tcpHealth: TcpHealthData[];
   alertMetadata: AlertMetadata;
   hasImpact: boolean;
   details: {
@@ -187,20 +189,13 @@ export const NetworkCorrelationCompact: React.FC<NetworkCorrelationCompactProps>
                         <stop offset="100%" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                    />
+                    <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
                     <XAxis dataKey="t" tick={{ fontSize: 11 }} />
                     <YAxis domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} tick={{ fontSize: 11 }} />
                     <Tooltip
                       formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)}
                       contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                        borderRadius: '8px',
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717',
+                        ...getTooltipContentStyle(resolvedTheme),
                         fontSize: '11px'
                       }}
                       labelStyle={{
@@ -236,11 +231,7 @@ export const NetworkCorrelationCompact: React.FC<NetworkCorrelationCompactProps>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={tcpHealth} margin={{ left: 8, right: 8, top: 8, bottom: 8 }} syncId="timeSeriesSync">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                      strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                    />
+                    <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
                     <XAxis dataKey="t" tick={{ fontSize: 11 }} />
                     <YAxis yAxisId="left" domain={[95, 100]} tickFormatter={(v) => formatNumber(v)} tick={{ fontSize: 11 }} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 30]} tickFormatter={(v) => formatNumber(v)} tick={{ fontSize: 11 }} />
@@ -252,10 +243,7 @@ export const NetworkCorrelationCompact: React.FC<NetworkCorrelationCompactProps>
                         return v;
                       }}
                       contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                        border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                        borderRadius: '8px',
-                        color: resolvedTheme === 'dark' ? '#fafafa' : '#171717',
+                        ...getTooltipContentStyle(resolvedTheme),
                         fontSize: '11px'
                       }}
                       labelStyle={{

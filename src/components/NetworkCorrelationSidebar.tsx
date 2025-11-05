@@ -3,6 +3,7 @@ import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 import { Minimize2, Maximize2, AlertTriangle } from 'lucide-react';
 import { CustomLegendWithInfo } from './CustomLegendWithInfo';
 import { NetworkLayerTooltip } from './NetworkLayerTooltip';
+import { getCartesianGridConfig, getTooltipContentStyle } from '@/config/chartConfig';
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
 
@@ -258,11 +259,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
             <ResponsiveContainer width="100%" height={280}>
               {activeChart === 'tcp' ? (
                 <LineChart data={tcpHealth} margin={{ top: 10, right: 20, left: 10, bottom: 10 }} syncId="timeSeriesSync">
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                    strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                  />
+                  <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
                   <XAxis
                     dataKey="t"
                     tick={{ fontSize: 13, fill: resolvedTheme === 'dark' ? '#a3a3a3' : '#737373' }}
@@ -285,12 +282,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                   />
                   <Tooltip
                     formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)}
-                    contentStyle={{
-                      backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                      border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                      borderRadius: '8px',
-                      color: resolvedTheme === 'dark' ? '#fafafa' : '#171717',
-                    }}
+                    contentStyle={getTooltipContentStyle(resolvedTheme)}
                     labelStyle={{
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}
@@ -354,11 +346,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                       <stop offset="100%" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={resolvedTheme === 'dark' ? '#525252' : '#e5e5e5'}
-                    strokeOpacity={resolvedTheme === 'dark' ? 0.5 : 0.5}
-                  />
+                  <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
                   <XAxis
                     dataKey="t"
                     tick={{ fontSize: 13, fill: resolvedTheme === 'dark' ? '#a3a3a3' : '#737373' }}
@@ -372,12 +360,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                   />
                   <Tooltip
                     formatter={(v) => (typeof v === "number" ? formatNumber(v) : v)}
-                    contentStyle={{
-                      backgroundColor: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
-                      border: `1px solid ${resolvedTheme === 'dark' ? '#404040' : '#e5e5e5'}`,
-                      borderRadius: '8px',
-                      color: resolvedTheme === 'dark' ? '#fafafa' : '#171717',
-                    }}
+                    contentStyle={getTooltipContentStyle(resolvedTheme)}
                     labelStyle={{
                       color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
                     }}

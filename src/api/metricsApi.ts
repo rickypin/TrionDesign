@@ -4,39 +4,26 @@
  */
 
 import type { ResponseRateData, NetworkHealthData, TcpHealthData } from '@/types';
-
-const API_BASE = '/api';
+import { apiRequest } from './request';
 
 /**
  * Fetch response rate time-series data
  */
 export async function fetchResponseRate(): Promise<ResponseRateData[]> {
-  const response = await fetch(`${API_BASE}/metrics/response-rate`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch response rate: ${response.statusText}`);
-  }
-  return response.json();
+  return apiRequest<ResponseRateData[]>('/metrics/response-rate');
 }
 
 /**
  * Fetch network health time-series data
  */
 export async function fetchNetworkHealth(): Promise<NetworkHealthData[]> {
-  const response = await fetch(`${API_BASE}/metrics/network-health`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch network health: ${response.statusText}`);
-  }
-  return response.json();
+  return apiRequest<NetworkHealthData[]>('/metrics/network-health');
 }
 
 /**
  * Fetch TCP health time-series data
  */
 export async function fetchTcpHealth(): Promise<TcpHealthData[]> {
-  const response = await fetch(`${API_BASE}/metrics/tcp-health`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch TCP health: ${response.statusText}`);
-  }
-  return response.json();
+  return apiRequest<TcpHealthData[]>('/metrics/tcp-health');
 }
 
