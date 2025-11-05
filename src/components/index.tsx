@@ -8,14 +8,18 @@ export { NetworkCorrelationCompact } from "./NetworkCorrelationCompact";
 export { NetworkCorrelationSidebar } from "./NetworkCorrelationSidebar";
 export { MetricInfoTooltip } from "./MetricInfoTooltip";
 export { CustomLegendWithInfo } from "./CustomLegendWithInfo";
+export { IPTooltip } from "./IPTooltip";
+export { CustomReferenceLabel } from "./CustomReferenceLabel";
+export { BusinessImpactSection } from "./BusinessImpactSection";
+export { AlertSummaryChart } from "./AlertSummaryChart";
 
-export const Card: React.FC<CardProps> = ({ children, className = "" }) => (
+export const Card: React.FC<CardProps> = ({ children, className = "" }): React.ReactElement => (
   <div className={`rounded-xl bg-white/70 dark:bg-neutral-800/90 backdrop-blur shadow-sm ring-1 ring-black/5 ${className}`}>
     {children}
   </div>
 );
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title, subtitle, right, iconColor = 'neutral' }) => {
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title, subtitle, right, iconColor = 'neutral' }): React.ReactElement => {
   // 为AlertTriangle图标自动使用红色主题
   const isAlertTriangle = Icon && (Icon.displayName === 'AlertTriangle' || Icon.name === 'AlertTriangle');
   const effectiveColor = isAlertTriangle ? 'red' : iconColor;
@@ -67,7 +71,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title,
   );
 };
 
-export const KPI: React.FC<KPIProps> = ({ label, value, trend, icon: Icon }) => (
+export const KPI: React.FC<KPIProps> = ({ label, value, trend, icon: Icon }): React.ReactElement => (
   <Card>
     <div className="p-4">
       <div className="flex items-center justify-between mb-2">
