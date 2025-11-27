@@ -72,27 +72,15 @@ export function isOutlier(value: number, allValues: number[]): boolean {
 }
 
 /**
- * Detect if a value should be bolded (stronger outlier)
- * 
- * Bold conditions:
- * 1. Absolute value >= 20%
- * 2. Z-score >= 1.5 (statistically significant outlier)
+ * Detect if a value should be bolded (high severity)
  * 
  * @param value - The value to check
- * @param allValues - All values in the dataset
+ * @param allValues - Unused in tiered logic
  * @returns Whether the value should be bolded
  */
 export function shouldBold(value: number, allValues: number[]): boolean {
-  if (allValues.length <= 1 || Math.min(...allValues) === Math.max(...allValues)) {
-    return false;
-  }
-
-  const mean = allValues.reduce((sum, v) => sum + v, 0) / allValues.length;
-  const variance = allValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / allValues.length;
-  const stdDev = Math.sqrt(variance);
-  const zScore = stdDev > 0 ? Math.abs(value - mean) / stdDev : 0;
-
-  return value >= OUTLIER_CONFIG.BOLD_THRESHOLD && zScore >= OUTLIER_CONFIG.Z_SCORE_THRESHOLD;
+  // Bold for medium-high impact and above
+  return value >= 40;
 }
 
 /**
@@ -129,18 +117,39 @@ export function findOutliers<T extends Record<string, any>>(
 }
 
 /**
- * Get the CSS class for table row coloring based on outlier detection
+ * Get the CSS class for table row coloring based on impact value
+ * Uses a tiered coloring system to indicate severity
  * 
- * @param value - The value to check
- * @param allValues - All values in the dataset
+ * @param value - The impact value (0-100)
+ * @param allValues - Unused in tiered coloring but kept for interface compatibility
  * @returns CSS class string for the row
  */
 export function getRowColorClass(value: number, allValues: number[]): string {
-  if (!isOutlier(value, allValues)) {
+  if (value <= 0) {
     return '';
   }
   
-  // Unified bright yellow highlight for all outliers
-  return 'bg-amber-300 dark:bg-amber-300 text-neutral-900 dark:text-neutral-900';
+  // Tiered coloring based on impact severity
+  // Using project's yellow (amber) color scheme
+  // Light mode: Varying lightness of amber background, always black text
+  // Dark mode: Varying opacity of the SAME amber-400 color to ensure unified hue, switching text color for contrast
+  
+  if (value >= 70) {
+    // Critical: Solid bright yellow
+    // Dark mode: amber-400 is bright enough for black text
+    return 'bg-amber-300 dark:bg-amber-400 text-neutral-900 dark:text-neutral-900';
+  }
+  if (value >= 40) {
+    // High: Lighter yellow (Light) / Semi-transparent bright yellow (Dark)
+    // Dark mode: ~30% opacity amber-400 on dark bg requires white text
+    return 'bg-amber-200 dark:bg-amber-400/30 text-neutral-900 dark:text-neutral-100';
+  }
+  if (value >= 15) {
+    // Medium: Very light yellow (Light) / Low opacity bright yellow (Dark)
+    return 'bg-amber-100 dark:bg-amber-400/15 text-neutral-900 dark:text-neutral-100';
+  }
+  
+  // Low impact (> 0): Subtle highlight
+  return 'bg-amber-50 dark:bg-amber-400/5 text-neutral-900 dark:text-neutral-100';
 }
 

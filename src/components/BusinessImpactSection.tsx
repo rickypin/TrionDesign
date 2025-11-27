@@ -16,14 +16,8 @@ import type {
 } from '@/types';
 import type { DimensionConfig } from '@/types/alert';
 
-interface MostImpactedItem {
-  type: 'transType' | 'returnCode' | 'server' | 'client' | 'channel';
-  name: string;
-  impact: number;
-}
-
 interface BusinessImpactSectionProps {
-  mostImpactedItems: MostImpactedItem[];
+// ...existing code...
   transType: TransTypeData[];
   returnCodes: ReturnCodeData[];
   channels: ChannelData[];
@@ -37,7 +31,6 @@ interface BusinessImpactSectionProps {
 }
 
 export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
-  mostImpactedItems,
   transType,
   returnCodes,
   channels,
@@ -46,6 +39,29 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
   dimensionConfig,
   successRateColumnConfig,
 }) => {
+  // Helper to count items with impact > 0
+  const getAffectedCount = (data: { impact: number }[]) => data.filter(d => d.impact > 0).length;
+
+  // Helper to render affected tag
+  // Since all dimensions are affected during an incident, we use a neutral style
+  // with amber accents to indicate the "impact" nature without visual noise.
+  const renderAffectedTag = (Icon: React.ElementType, label: string, data: { impact: number }[]) => {
+    if (data.length === 0) return null;
+    
+    const count = getAffectedCount(data);
+    const total = data.length;
+
+    return (
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50">
+        <Icon className="h-3.5 w-3.5 text-amber-500 dark:text-amber-500" />
+        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+          <span className="text-neutral-900 dark:text-neutral-100 font-semibold">{count}</span>
+          <span className="text-neutral-400 dark:text-neutral-500">/{total}</span> {label}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <Card className="flex-1 min-w-0">
       {/* Section Header */}
@@ -55,97 +71,18 @@ export const BusinessImpactSection: React.FC<BusinessImpactSectionProps> = ({
         </h3>
       </div>
 
-      {/* Summary Header - Most Impacted and Affected in one line */}
+      {/* Summary Header - Affected Counts */}
       <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-600">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Most Impacted - Show all outlier items */}
-          {mostImpactedItems.length > 0 && (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-                  Most Impacted:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {mostImpactedItems.map((item) => (
-                    <div key={`${item.type}-${item.name}`} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-300 dark:bg-amber-300">
-                      <span className="text-xs text-neutral-900 dark:text-neutral-900">
-                        {(() => {
-                          switch (item.type) {
-                            case 'transType': return 'Trans Type';
-                            case 'returnCode': return 'Return Code';
-                            case 'server': return 'Server IP';
-                            case 'client': return 'Client IP';
-                            case 'channel': return 'Channel';
-                            default: return 'Dimension';
-                          }
-                        })()}
-                      </span>
-                      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-900">
-                        {item.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600" />
-            </>
-          )}
-
           {/* Affected - Always show regardless of primaryFactor */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Affected:</span>
-
-            {/* Trans Type Count */}
-            {transType.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                  {transType.length} Trans Type{transType.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-
-            {/* Return Code Count */}
-            {returnCodes.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                <Activity className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                  {returnCodes.length} Return Code{returnCodes.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-
-            {/* Channel Count */}
-            {channels.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                <BarChart3 className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                  {channels.length} Channel{channels.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-
-            {/* Server IP Count */}
-            {servers.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                <Server className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                  {servers.length} Server IP{servers.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-
-            {/* Client IP Count */}
-            {clients.length > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-700">
-                <Globe className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">
-                  {clients.length} Client IP{clients.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
+            
+            {renderAffectedTag(BarChart3, "Trans Types", transType)}
+            {renderAffectedTag(Activity, "Return Codes", returnCodes)}
+            {renderAffectedTag(BarChart3, "Channels", channels)}
+            {renderAffectedTag(Server, "Server IPs", servers)}
+            {renderAffectedTag(Globe, "Client IPs", clients)}
           </div>
         </div>
       </div>
