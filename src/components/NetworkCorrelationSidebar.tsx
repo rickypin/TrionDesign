@@ -7,6 +7,65 @@ import { getCartesianGridConfig, getTooltipContentStyle } from '@/config/chartCo
 import type { NetworkHealthData, TcpHealthData } from "@/types";
 import type { AlertMetadata } from "@/types/alert";
 
+type MetricSummaryId = 'traffic' | 'availability' | 'performance';
+type MetricDataset = 'network' | 'tcp';
+
+interface MetricSummaryConfig {
+  id: MetricSummaryId;
+  label: string;
+  subLabel: string;
+  dataset: MetricDataset;
+  key: string;
+  unitSuffix?: string;
+  reverse?: boolean;
+  statusFrom?: 'availability' | 'performance';
+  thresholdPercent?: number;
+  thresholdAbsolute?: number;
+  formatType?: 'default' | 'compact';
+  normalCaption: string;
+  alertCaption: string;
+}
+
+const METRIC_SUMMARY_CONFIG: MetricSummaryConfig[] = [
+  {
+    id: 'traffic',
+    label: 'Traffic',
+    subLabel: 'Throughput',
+    dataset: 'network',
+    key: 'newConnections',
+    formatType: 'compact',
+    thresholdPercent: 15,
+    thresholdAbsolute: 400,
+    normalCaption: 'Alert window traffic is aligned with the baseline.',
+    alertCaption: 'Traffic volume dips inside the alert window, mirroring the alert.',
+  },
+  {
+    id: 'availability',
+    label: 'Availability',
+    subLabel: 'TCP Setup',
+    dataset: 'tcp',
+    key: 'setup',
+    unitSuffix: '%',
+    reverse: true,
+    statusFrom: 'availability',
+    thresholdAbsolute: 1,
+    normalCaption: 'Connection success remains within normal variance.',
+    alertCaption: 'TCP setup success drops inside the alert window.',
+  },
+  {
+    id: 'performance',
+    label: 'Performance',
+    subLabel: 'ReTx Rate',
+    dataset: 'network',
+    key: 'dupAck',
+    unitSuffix: '%',
+    statusFrom: 'performance',
+    thresholdPercent: 80,
+    normalCaption: 'Packet delivery order stays consistent with baseline.',
+    alertCaption: 'Duplicate ACK bursts align with the alert window.',
+  },
+];
+
 interface NetworkCorrelationSidebarProps {
   networkHealth: NetworkHealthData[];
   tcpHealth: TcpHealthData[];
@@ -40,11 +99,184 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   serverIps = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeChart, setActiveChart] = useState<'network' | 'tcp'>(
-    details.performance === 'error' ? 'network' : 'tcp'
+  const [activeChart, setActiveChart] = useState<'network' | 'tcp' | 'traffic'>(
+    details.performance === 'error'
+      ? 'network'
+      : details.availability === 'error'
+        ? 'tcp'
+        : 'traffic'
   );
 
   const isHealthy = !hasImpact;
+
+  const formatLargeNumber = React.useCallback((value: number) => {
+    const sign = value < 0 ? '-' : '';
+    const absValue = Math.abs(value);
+    if (absValue >= 1_000_000) {
+      return `${sign}${formatNumber(absValue / 1_000_000)}M`;
+    }
+    if (absValue >= 1_000) {
+      return `${sign}${formatNumber(absValue / 1_000)}k`;
+    }
+    return `${sign}${formatNumber(absValue)}`;
+  }, [formatNumber]);
+
+  const metricSummaries = React.useMemo(() => {
+    if (!alertMetadata?.duration?.start) {
+      return [];
+    }
+
+    const timeToMinutes = (time?: string | null) => {
+      if (!time) return null;
+      const [hours, minutes] = time.split(':');
+      const h = Number(hours);
+      const m = Number(minutes);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    };
+
+    const alertStartMinutes = timeToMinutes(alertMetadata.duration.start);
+    if (alertStartMinutes === null) {
+      return [];
+    }
+
+    const rawEndMinutes = alertMetadata.duration.end ? timeToMinutes(alertMetadata.duration.end) : null;
+    const alertEndMinutes = rawEndMinutes ?? Infinity;
+
+    const splitSeries = <T extends { t: string }>(series: T[]) => {
+      const baseline: T[] = [];
+      const alertWindow: T[] = [];
+
+      series.forEach((point) => {
+        const minutes = timeToMinutes(point.t);
+        if (minutes === null) return;
+        if (minutes < alertStartMinutes) {
+          baseline.push(point);
+        } else if (minutes >= alertStartMinutes && minutes <= alertEndMinutes) {
+          alertWindow.push(point);
+        }
+      });
+
+      const fallback = series;
+
+      return {
+        baseline: baseline.length ? baseline : fallback,
+        alert: alertWindow.length ? alertWindow : fallback,
+      };
+    };
+
+    const networkSplit = splitSeries(networkHealth);
+    const tcpSplit = splitSeries(tcpHealth);
+
+    const calcAverage = <T extends Record<string, unknown>>(points: T[], key: string) => {
+      if (!points.length) return 0;
+      const total = points.reduce((sum, point) => sum + (Number(point[key]) || 0), 0);
+      return total / points.length;
+    };
+
+    const formatValue = (value: number, config: MetricSummaryConfig) => {
+      if (config.formatType === 'compact') {
+        const compact = formatLargeNumber(value);
+        return config.unitSuffix ? `${compact}${config.unitSuffix}` : compact;
+      }
+
+      const formatted = formatNumber(value);
+      return config.unitSuffix ? `${formatted}${config.unitSuffix}` : formatted;
+    };
+
+    return METRIC_SUMMARY_CONFIG.map((config) => {
+      const split = config.dataset === 'network' ? networkSplit : tcpSplit;
+      const baselineAvg = calcAverage(split.baseline, config.key);
+      const alertAvg = calcAverage(split.alert, config.key);
+      const deltaValue = alertAvg - baselineAvg;
+      const percentChange = baselineAvg === 0 ? null : (deltaValue / baselineAvg) * 100;
+
+      const meetsPercent = percentChange !== null && config.thresholdPercent !== undefined
+        ? Math.abs(percentChange) >= config.thresholdPercent
+        : false;
+      const meetsAbsolute = config.thresholdAbsolute !== undefined
+        ? Math.abs(deltaValue) >= config.thresholdAbsolute
+        : false;
+
+      const changeSignificant = config.reverse
+        ? (deltaValue < 0) && (meetsPercent || meetsAbsolute || percentChange === null)
+        : (Math.abs(deltaValue) > 0 && (meetsPercent || meetsAbsolute || percentChange === null));
+
+      const statusOverride = config.statusFrom === 'availability'
+        ? details.availability === 'error'
+        : config.statusFrom === 'performance'
+          ? details.performance === 'error'
+          : null;
+
+      const isDegraded = statusOverride !== null
+        ? statusOverride
+        : (changeSignificant && !isHealthy);
+
+      const baseText = `${formatValue(baselineAvg, config)} -> ${formatValue(alertAvg, config)}`;
+
+      let deltaText = 'Delta 0';
+      if (deltaValue !== 0) {
+        const direction = deltaValue > 0 ? '+' : '-';
+        const percentText = percentChange !== null
+          ? ` (${deltaValue > 0 ? '+' : '-'}${formatNumber(Math.abs(percentChange))}%)`
+          : '';
+        deltaText = `Delta ${direction}${formatValue(Math.abs(deltaValue), config)}${percentText}`;
+      }
+
+      const statusBadgeClasses = isDegraded
+        ? 'bg-amber-100/40 dark:bg-amber-400/10 text-amber-700 dark:text-amber-200'
+        : 'bg-emerald-100/30 dark:bg-emerald-400/10 text-emerald-700 dark:text-emerald-200';
+
+      const hasMovement = isDegraded && Math.abs(deltaValue) > 0;
+      const changeDirectionSymbol = hasMovement
+        ? (deltaValue > 0 ? '↑' : '↓')
+        : '→';
+
+      const percentText = percentChange !== null
+        ? `${deltaValue > 0 ? '+' : deltaValue < 0 ? '-' : ''}${formatNumber(Math.abs(percentChange))}%`
+        : null;
+
+      const changeSummary = hasMovement
+        ? `${formatValue(Math.abs(deltaValue), config)}${percentText ? ` (${percentText})` : ''}`
+        : `${formatValue(alertAvg, config)} (Stable band)`;
+
+      const summaryText = isDegraded
+        ? 'Alert window variance detected.'
+        : 'Baseline aligned.';
+
+      return {
+        id: config.id,
+        label: config.label,
+        subLabel: config.subLabel,
+        statusLabel: isDegraded ? 'Degraded' : 'Normal',
+        statusBadgeClasses,
+        deltaClass: isDegraded
+          ? 'text-amber-700 dark:text-amber-200'
+          : 'text-emerald-600 dark:text-emerald-200',
+        arrowClass: isDegraded
+          ? 'text-amber-600 dark:text-amber-200'
+          : 'text-emerald-500 dark:text-emerald-200',
+        cardClasses: isDegraded
+          ? 'border border-amber-500/40 dark:border-amber-400/40 bg-amber-500/10 dark:bg-amber-400/10'
+          : 'border border-emerald-500/40 dark:border-emerald-400/40 bg-emerald-500/10 dark:bg-emerald-400/5',
+        changeDirectionSymbol,
+        changeSummary,
+        isStable: !hasMovement,
+        metricName: config.subLabel,
+        summaryText,
+      };
+    });
+  }, [
+    alertMetadata.duration.end,
+    alertMetadata.duration.start,
+    details.availability,
+    details.performance,
+    formatNumber,
+    formatLargeNumber,
+    isHealthy,
+    networkHealth,
+    tcpHealth,
+  ]);
 
   // Handle expand/collapse and notify parent - wrapped in useCallback for stable reference
   const handleExpandToggle = React.useCallback((expanded: boolean) => {
@@ -73,7 +305,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
   const getStatusText = () => {
     if (isHealthy) {
       return {
-        badge: 'Not Correlated',
+        badge: 'Healthy',
         description: 'Network metrics show no correlation with the alert.',
         availability: 'Normal',
         performance: 'Normal',
@@ -84,7 +316,7 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
       if (details.performance === 'error') issues.push('Performance degraded');
 
       return {
-        badge: 'Correlated',
+        badge: 'Anomalies Detected',
         description: `Network issues detected and correlated with alert - ${issues.join(', ')}.`,
         availability: details.availability === 'error' ? 'Degraded' : 'Normal',
         performance: details.performance === 'error' ? 'Degraded' : 'Normal',
@@ -101,11 +333,16 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
         return 'TCP setup success rate dropped ~10 percentage points below normal, closely aligned with transaction volume decline';
       }
       return 'TCP connection establishment is stable with no impact on transaction metrics';
-    } else {
+    } else if (activeChart === 'network') {
       if (details.performance === 'error') {
         return 'Retransmission and Duplicate ACK rise in tandem, indicating packet loss on the network path, closely aligned with declining transaction response rate';
       }
       return 'Network performance metrics are healthy with no impact on transaction metrics';
+    } else {
+      if (!isHealthy && hasImpact) {
+        return 'New connection volume and throughput dip inside the alert window, mirroring the degraded business response rate.';
+      }
+      return 'Network traffic volume is aligned with the baseline window.';
     }
   };
 
@@ -147,41 +384,37 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
         </>
       )}
 
-      {/* Summary Section - Only show when NOT expanded */}
-      {!isExpanded && (
-        <div
-          className={`mx-4 mb-3 px-3 py-2.5 border-l-4 rounded-lg ${
-            isHealthy
-              ? 'bg-green-50/60 dark:bg-green-900/25 border-green-500 dark:border-green-400'
-              : 'bg-amber-50/60 dark:bg-amber-800/35 border-amber-500 dark:border-amber-400'
-          }`}
-        >
-          <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-            {statusInfo.description}
-          </p>
-
-          {/* Status Details */}
-          <div className="mt-2 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">Availability:</span>
-              <span className={`text-xs font-medium ${
-                details.availability === 'error'
-                  ? 'text-amber-700 dark:text-amber-400'
-                  : 'text-green-700 dark:text-green-400'
-              }`}>
-                {statusInfo.availability}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">Performance:</span>
-              <span className={`text-xs font-medium ${
-                details.performance === 'error'
-                  ? 'text-amber-700 dark:text-amber-400'
-                  : 'text-green-700 dark:text-green-400'
-              }`}>
-                {statusInfo.performance}
-              </span>
-            </div>
+      {/* Metric Summaries */}
+      {!isExpanded && metricSummaries.length > 0 && (
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-1 gap-2">
+            {metricSummaries.map((metric) => (
+              <div
+                key={metric.id}
+                className={`rounded-lg px-4 py-3 ${metric.cardClasses}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                    {metric.label}
+                  </span>
+                  <span className={`text-[11px] font-bold uppercase tracking-wide rounded-md px-2 py-0.5 ${metric.statusBadgeClasses}`}>
+                    {metric.statusLabel}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center text-xs font-medium text-neutral-700 dark:text-neutral-200">
+                  <span>{metric.metricName}</span>
+                  <span className={`mx-1.5 text-sm ${metric.arrowClass}`}>
+                    {metric.changeDirectionSymbol}
+                  </span>
+                  <span className={`text-xs font-semibold ${metric.deltaClass}`}>
+                    {metric.changeSummary}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                  {metric.summaryText}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -209,6 +442,23 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
 
             {/* Right: Metric Tabs and Close Button */}
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveChart('traffic')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all ${
+                  activeChart === 'traffic'
+                    ? 'bg-neutral-200 dark:bg-neutral-600 font-semibold'
+                    : 'bg-neutral-50 dark:bg-neutral-700/50 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200/50 dark:border-neutral-600/40'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  hasImpact
+                    ? 'bg-amber-400'
+                    : 'bg-green-500'
+                }`} />
+                <span className="text-neutral-900 dark:text-neutral-100">
+                  Traffic
+                </span>
+              </button>
               <button
                 onClick={() => setActiveChart('tcp')}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all ${
@@ -330,6 +580,81 @@ export const NetworkCorrelationSidebar: React.FC<NetworkCorrelationSidebarProps>
                     strokeWidth={2.5}
                     dot={false}
                     name="TCP RST"
+                  />
+                </LineChart>
+              ) : activeChart === 'traffic' ? (
+                <LineChart data={networkHealth} margin={{ top: 10, right: 20, left: 10, bottom: 10 }} syncId="timeSeriesSync">
+                  <CartesianGrid {...getCartesianGridConfig(resolvedTheme)} />
+                  <XAxis
+                    dataKey="t"
+                    tick={{ fontSize: 13, fill: resolvedTheme === 'dark' ? '#a3a3a3' : '#737373' }}
+                    stroke={resolvedTheme === 'dark' ? '#525252' : '#d4d4d4'}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    domain={['auto', 'auto']}
+                    tickFormatter={(v) => formatLargeNumber(v)}
+                    tick={{ fontSize: 13, fill: resolvedTheme === 'dark' ? '#a3a3a3' : '#737373' }}
+                    stroke={resolvedTheme === 'dark' ? '#525252' : '#d4d4d4'}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={['auto', 'auto']}
+                    tickFormatter={(v) => formatLargeNumber(v)}
+                    tick={{ fontSize: 13, fill: resolvedTheme === 'dark' ? '#a3a3a3' : '#737373' }}
+                    stroke={resolvedTheme === 'dark' ? '#525252' : '#d4d4d4'}
+                  />
+                  <Tooltip
+                    formatter={(value) => (typeof value === 'number' ? formatLargeNumber(value) : value)}
+                    contentStyle={getTooltipContentStyle(resolvedTheme)}
+                    labelStyle={{
+                      color: resolvedTheme === 'dark' ? '#fafafa' : '#171717'
+                    }}
+                  />
+                  <Legend
+                    content={<CustomLegendWithInfo />}
+                  />
+                  <ReferenceArea
+                    yAxisId="left"
+                    x1={alertMetadata.duration.start}
+                    x2={alertMetadata.duration.end || (networkHealth.length > 0 ? networkHealth[networkHealth.length - 1].t : alertMetadata.duration.start)}
+                    fill={getReferenceAreaColor('traffic')}
+                    fillOpacity={0.1}
+                  />
+                  <ReferenceLine
+                    yAxisId="left"
+                    x={alertMetadata.duration.start}
+                    stroke={resolvedTheme === 'dark' ? getReferenceLineColor('traffic').dark : getReferenceLineColor('traffic').light}
+                    strokeWidth={2}
+                    strokeOpacity={0.7}
+                  />
+                  {alertMetadata.duration.end && (
+                    <ReferenceLine
+                      yAxisId="left"
+                      x={alertMetadata.duration.end}
+                      stroke={resolvedTheme === 'dark' ? getReferenceLineColor('traffic').dark : getReferenceLineColor('traffic').light}
+                      strokeWidth={2}
+                      strokeOpacity={0.7}
+                    />
+                  )}
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="newConnections"
+                    stroke={CHART_COLORS.cyan}
+                    strokeWidth={2.5}
+                    dot={false}
+                    name="New Connections"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="throughput"
+                    stroke={CHART_COLORS.purple}
+                    strokeWidth={2.5}
+                    dot={false}
+                    name="Throughput"
                   />
                 </LineChart>
               ) : (

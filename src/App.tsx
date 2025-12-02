@@ -138,13 +138,13 @@ export default function App(): React.ReactElement {
   const getReferenceAreaColor = useCallback((chartType: string) => {
     if (!scenarioStatus) return '#16a34a';
 
-    if (chartType === 'network') {
-      // Performance chart
+    const isPerformanceChart = chartType === 'network' || chartType === 'traffic';
+
+    if (isPerformanceChart) {
       return scenarioStatus.networkAssessment.details.performance === 'error' ? '#f59e0b' : '#16a34a';
-    } else {
-      // Availability chart
-      return scenarioStatus.networkAssessment.details.availability === 'error' ? '#f59e0b' : '#16a34a';
     }
+
+    return scenarioStatus.networkAssessment.details.availability === 'error' ? '#f59e0b' : '#16a34a';
   }, [scenarioStatus]);
 
   const getReferenceLineColor = useCallback((chartType: string) => {
@@ -155,7 +155,8 @@ export default function App(): React.ReactElement {
       };
     }
 
-    const isError = chartType === 'network'
+    const isPerformanceChart = chartType === 'network' || chartType === 'traffic';
+    const isError = isPerformanceChart
       ? scenarioStatus.networkAssessment.details.performance === 'error'
       : scenarioStatus.networkAssessment.details.availability === 'error';
 

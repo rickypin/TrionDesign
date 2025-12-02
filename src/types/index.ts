@@ -11,6 +11,8 @@ export interface NetworkHealthData {
   loss: number;
   retrans: number;
   dupAck: number;
+  newConnections: number;
+  throughput: number;
 }
 
 export interface TcpHealthData {
